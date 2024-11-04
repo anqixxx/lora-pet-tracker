@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:\\Users\\LeLee\\Documents\\Arduino\\libraries\\RadioHead\\**",
+                "C:\\Users\\LeLee\\AppData\\Local\\Arduino15\\libraries\\**",
+                "C:\\Users\\LeLee\\AppData\\Local\\Arduino15\\packages\\**",
+                "C:\\Users\\LeLee\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\samd\\1.8.14\\libraries\\**",
+                "C:\\Users\\LeLee\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\samd\\1.8.14\\libraries\\SPI"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ]
+        }
+    ],
+    "version": 4
+}
