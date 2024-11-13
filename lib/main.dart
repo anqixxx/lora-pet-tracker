@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,11 +35,11 @@ class MyApp extends StatelessWidget {
 }
 
 class MyAppState extends ChangeNotifier {
-  final DatabaseReference _gpsDataRef = FirebaseDatabase.instance.ref('gps_data');
-  final DatabaseReference _commandsRef = FirebaseDatabase.instance.ref('commands');
+  final CollectionReference _gpsDataRef = FirebaseFirestore.instance.collection('gps_data');
+  final CollectionReference _commandsRef = FirebaseFirestore.instance.collection('commands');
 
-  StreamSubscription<DatabaseEvent>? _gpsDataSubscription;
-  StreamSubscription<DatabaseEvent>? _commandSubscription;
+  StreamSubscription<QuerySnapshot>? _gpsDataSubscription;
+  StreamSubscription<QuerySnapshot>? _commandSubscription;
   List<Map<String, dynamic>> gpsDataList = [];
   List<Map<String, dynamic>> commands = [];
 
@@ -48,42 +49,33 @@ class MyAppState extends ChangeNotifier {
   }
 
   void _startListeningForGPSData() {
-    print("Listening for GPS data...");
-    _gpsDataSubscription = _gpsDataRef.limitToLast(100).onValue.listen((event) {
-      if (event.snapshot.value != null) {
-        gpsDataList = (event.snapshot.value as Map).values
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
+    print("Listening for GPS data... NEW");
+    _gpsDataSubscription = _gpsDataRef.snapshots().listen((querySnapshot) {
+      gpsDataList = querySnapshot.docs
+          .map((doc) => {
+            'lat': doc['lat'],
+            'long': doc['long'],
+            'time': doc['time']
+          })
+          .toList();
+      print("waiting");
+      gpsDataList.forEach((data) {
+        print("New GPS Data: Latitude = ${data['lat']}, Longitude = ${data['long']}");
+      });
 
-            // Print each GPS data point for debugging, remove when done
-            gpsDataList.forEach((data) {
-              print("New GPS Data: Latitude = ${data['lat']}, Longitude = ${data['long']}");
-            });
-        notifyListeners();
-      }
-    });
-  }
-
-  void _startListeningForCommands() {
-    _commandSubscription = _commandsRef.onChildAdded.listen((event) {
-      final newCommand = Map<String, dynamic>.from(event.snapshot.value as Map);
-      commands.add(newCommand);
       notifyListeners();
     });
   }
 
-  Future<void> sendGPSData(double latitude, double longitude) async {
-    await _gpsDataRef.push().set({
-      'latitude': latitude,
-      'longitude': longitude,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    });
-  }
-
-  Future<void> sendCommand(String commandType, [Map<String, dynamic>? payload]) async {
-    await _commandsRef.push().set({
-      'commandType': commandType,
-      'payload': payload,
+  void _startListeningForCommands() {
+    _commandSubscription = _commandsRef.snapshots().listen((querySnapshot) {
+      commands = querySnapshot.docs
+          .map((doc) => {
+            'command': doc['command'],
+            'timestamp': doc['timestamp']
+          })
+          .toList();
+      notifyListeners();
     });
   }
 
@@ -277,21 +269,21 @@ Widget map() {
                 alignment: Alignment.center,
                 child: Icon(Icons.location_on, color: Colors.red, size: 40),
               ),
-
               // Add markers for each GPS data point from Firebase, making them black
-              ...gpsDataList.map((data){
-                final latitude = data['latitude'] as double;
-                final longitude = data['longitude'] as double;
-                final point = LatLng(latitude, longitude);
+              if (gpsDataList.isNotEmpty) 
+                ...gpsDataList.map((data) {
+                  final latitude = data['lat'] as double;
+                  final longitude = data['long'] as double;
+                  final point = LatLng(latitude, longitude);
 
-                return Marker(
-                  width: 80.0,
-                  height: 80.0,
-                  point: point,
-                  alignment: Alignment.center,
-                  child: Icon(Icons.location_on, color: Colors.black, size: 40),
-                );
-              }).toList(),
+                  return Marker(
+                    width: 80.0,
+                    height: 80.0,
+                    point: point,
+                    alignment: Alignment.center,
+                    child: Icon(Icons.location_on, color: Colors.black, size: 40),
+                  );
+                }).toList(),  // Convert map result to List<Marker>
             ];
 
             return FlutterMap(
@@ -303,14 +295,12 @@ Widget map() {
               children: [
                 openStreetMapTileLayer,
                 MarkerLayer(
-                  markers : markers,
+                  markers: markers,
                 ),
               ],
             );
           },
         );
-
-       
       }
     },
   );
