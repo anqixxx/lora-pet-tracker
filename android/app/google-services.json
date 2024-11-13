@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1026945701157",
+    "project_id": "lora-26d99",
+    "storage_bucket": "lora-26d99.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1026945701157:android:1d31951013cd3f4549f6cc",
+        "android_client_info": {
+          "package_name": "com.example.lora"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACcy5bxgtBde5rC1jJbkGwqWqZVzmKLeE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

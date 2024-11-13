@@ -1,0 +1,31 @@
+// <project>/android/build.gradle
+buildscript {
+    repositories {
+        google()  // Ensure you have this repository
+        mavenCentral()
+    }
+
+    dependencies {
+        // Applies the Google services plugin
+        classpath 'com.google.gms:google-services:4.4.2'
+    }
+}
+
+allprojects {
+    repositories {
+        google()  // Ensure this is included for Firebase dependencies
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = "../build"
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
