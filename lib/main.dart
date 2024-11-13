@@ -160,12 +160,14 @@ class _MainPageState extends State<MainPage> {
   bool _isRunning = false; // Variable to check if countdown is running
   Timer? _timer; // Timer for countdown
 
+  // Firestore reference (you can change the collection and document paths as needed)
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   void startCountdown() {
     setState(() {
-      _start = 10; // Set countdown to 10 seconds
+      _start = 30; // Set countdown to 30 seconds
       _isRunning = true; // Mark countdown as running
     });
-
+    
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       if (_start > 0) {
         setState(() {
@@ -177,8 +179,21 @@ class _MainPageState extends State<MainPage> {
           _isRunning = false; // Mark countdown as not running
           _start = 0; // Reset start to 0 for display purposes
         });
-      }
+    }
     });
+  }
+
+  // Function to send a command to Firestore
+  void updateSpeakerCommand() async {
+    try {
+      await _firestore.collection('commands').add({
+        'timestamp': FieldValue.serverTimestamp(),
+        'command': 'speaker',
+      });
+      print("Speaker command sent to Firestore");
+    } catch (e) {
+      print("Error sending speaker command to Firestore: $e");
+    }
   }
 
   @override
@@ -189,48 +204,207 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton(
-                onPressed: () {
-                  if (_isRunning) {
-                    // Reset countdown if already running
-                    setState(() {
-                      _start = 30; // Reset countdown
-                    });
-                  } else {
-                    startCountdown(); // Start countdown if not running
-                  }
-                },
-                child: Text('Speaker'),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  minimumSize: Size(100, 50),
-                  textStyle: TextStyle(fontSize: 16),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Lora App"),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Map Section
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: FlutterMap(
+                  options: MapOptions(
+                    initialCenter: LatLng(49.2827, -123.1207), // Center map on Vancouver
+                    initialZoom: 13.0,
+                  ),
+                  children: [
+                    openStreetMapTileLayer,
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: LatLng(49.2827, -123.1207),
+                          child: Icon(Icons.location_on, color: Colors.red, size: 40),
+                        ),
+                        // Additional markers for pet locations can be added here
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(width: 10), // Space between button and countdown
-              if (_isRunning) // Show countdown only if running
-                Container(
-                  width: 40, // Set a width for the countdown display
-                  alignment: Alignment.center,
-                  child: Text(
-                    '$_start',
-                    style: TextStyle(fontSize: 20), // Larger font for countdown
-                  ),
+            ),
+            SizedBox(height: 20),
+            // Mode Selection Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    // Normal Mode functionality here
+                  },
+                  child: Text("Normal Mode"),
                 ),
-            ],
-          ),
-        ],
+                SizedBox(width: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    // Search Mode functionality here
+                  },
+                  child: Text("Search Mode"),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            // Battery and Last Updated Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  children: [
+                    Icon(Icons.battery_full),
+                    Text("Battery Level"),
+                  ],
+                ),
+                Column(
+                  children: [
+                    Text("Last Checked"),
+                    Text("10:09"), // Replace with dynamic timestamp
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            // Speaker and Timer Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    print("Speaker button pressed");
+                    if (_isRunning) {
+                    // Reset countdown if already running
+                      setState(() {
+                      _start = 30; // Reset countdown
+                    });
+                    } else {
+                      startCountdown(); // Start countdown if not running
+                    }
+                    // Send Firestore command for the speaker
+                    updateSpeakerCommand();                  
+                  },
+
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    minimumSize: Size(100, 50),
+                    textStyle: TextStyle(fontSize: 16)
+                  ),
+
+                  child: Text("Speaker"),
+                ),
+                SizedBox(width: 20),
+                if (_isRunning) // Show countdown only if running
+                  Container(
+                    width: 40,
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$_start', // Replace with countdown timer value
+                      style: TextStyle(fontSize: 20),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
+// class MainPage extends StatefulWidget {
+//   @override
+//   _MainPageState createState() => _MainPageState();
+// }
+
+// class _MainPageState extends State<MainPage> {
+//   int _start = 0; // Variable to keep track of the countdown
+//   bool _isRunning = false; // Variable to check if countdown is running
+//   Timer? _timer; // Timer for countdown
+
+//   void startCountdown() {
+//     setState(() {
+//       _start = 30; // Set countdown to 30 seconds
+//       _isRunning = true; // Mark countdown as running
+//     });
+
+//     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+//       if (_start > 0) {
+//         setState(() {
+//           _start--; // Decrement countdown
+//         });
+//       } else {
+//         timer.cancel(); // Cancel timer when countdown reaches zero
+//         setState(() {
+//           _isRunning = false; // Mark countdown as not running
+//           _start = 0; // Reset start to 0 for display purposes
+//         });
+//       }
+//     });
+//   }
+
+//   @override
+//   void dispose() {
+//     _timer?.cancel(); // Cancel timer on dispose
+//     super.dispose();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Center(
+//       child: Column(
+//         mainAxisAlignment: MainAxisAlignment.center,
+//         children: [
+//           Row(
+//             mainAxisSize: MainAxisSize.min,
+//             children: [
+//               ElevatedButton(
+//                 onPressed: () {
+//                   if (_isRunning) {
+//                     // Reset countdown if already running
+//                     setState(() {
+//                       _start = 30; // Reset countdown
+//                     });
+//                   } else {
+//                     startCountdown(); // Start countdown if not running
+//                   }
+//                 },
+//                 child: Text('Speaker'),
+//                 style: ElevatedButton.styleFrom(
+//                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+//                   minimumSize: Size(100, 50),
+//                   textStyle: TextStyle(fontSize: 16),
+//                 ),
+//               ),
+//               SizedBox(width: 10), // Space between button and countdown
+//               if (_isRunning) // Show countdown only if running
+//                 Container(
+//                   width: 40, // Set a width for the countdown display
+//                   alignment: Alignment.center,
+//                   child: Text(
+//                     '$_start',
+//                     style: TextStyle(fontSize: 20), // Larger font for countdown
+//                   ),
+//                 ),
+//             ],
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
 class HistoryPage extends StatelessWidget {
   @override
