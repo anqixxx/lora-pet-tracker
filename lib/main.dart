@@ -1,4 +1,3 @@
-import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +11,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   runApp(MyApp());
+  print("Firebase Initialized");
 }
 
 class MyApp extends StatelessWidget {
@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MyAppState extends ChangeNotifier {
-  final DatabaseReference _gpsDataRef = FirebaseDatabase.instance.ref('gpsData');
+  final DatabaseReference _gpsDataRef = FirebaseDatabase.instance.ref('gps_data');
   final DatabaseReference _commandsRef = FirebaseDatabase.instance.ref('commands');
 
   StreamSubscription<DatabaseEvent>? _gpsDataSubscription;
@@ -48,11 +48,17 @@ class MyAppState extends ChangeNotifier {
   }
 
   void _startListeningForGPSData() {
+    print("Listening for GPS data...");
     _gpsDataSubscription = _gpsDataRef.limitToLast(100).onValue.listen((event) {
       if (event.snapshot.value != null) {
         gpsDataList = (event.snapshot.value as Map).values
             .map((e) => Map<String, dynamic>.from(e))
             .toList();
+
+            // Print each GPS data point for debugging, remove when done
+            gpsDataList.forEach((data) {
+              print("New GPS Data: Latitude = ${data['lat']}, Longitude = ${data['long']}");
+            });
         notifyListeners();
       }
     });
@@ -258,27 +264,53 @@ Widget map() {
         final position = snapshot.data;
         final initialCenter = LatLng(position!.latitude, position.longitude);
 
-        return FlutterMap(
-          options: MapOptions(
-            initialCenter: initialCenter,
-            initialZoom: 13, // Set your preferred initial zoom level.
-            interactionOptions: const InteractionOptions(flags: ~InteractiveFlag.doubleTapZoom),
-          ),
-          children: [
-            openStreetMapTileLayer,
-            MarkerLayer(
-              markers: [
-                Marker(
+        return Consumer<MyAppState>(
+          builder: (context, appState, child) {
+            final gpsDataList = appState.gpsDataList; // Get firebase GPS data
+
+            List<Marker> markers = [
+              // Add a marker for the current location, making it red
+              Marker(
+                width: 80.0,
+                height: 80.0,
+                point: initialCenter,
+                alignment: Alignment.center,
+                child: Icon(Icons.location_on, color: Colors.red, size: 40),
+              ),
+
+              // Add markers for each GPS data point from Firebase, making them black
+              ...gpsDataList.map((data){
+                final latitude = data['latitude'] as double;
+                final longitude = data['longitude'] as double;
+                final point = LatLng(latitude, longitude);
+
+                return Marker(
                   width: 80.0,
                   height: 80.0,
-                  point: initialCenter,
+                  point: point,
                   alignment: Alignment.center,
-                  child: Icon(Icons.location_pin, color: Colors.red, size: 40),
+                  child: Icon(Icons.location_on, color: Colors.black, size: 40),
+                );
+              }).toList(),
+            ];
+
+            return FlutterMap(
+              options: MapOptions(
+                initialCenter: initialCenter,
+                initialZoom: 13, // Set your preferred initial zoom level.
+                interactionOptions: const InteractionOptions(flags: ~InteractiveFlag.doubleTapZoom),
+              ),
+              children: [
+                openStreetMapTileLayer,
+                MarkerLayer(
+                  markers : markers,
                 ),
               ],
-            ),
-          ],
+            );
+          },
         );
+
+       
       }
     },
   );
