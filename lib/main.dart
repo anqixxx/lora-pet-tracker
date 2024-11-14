@@ -23,10 +23,10 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => MyAppState(),
       child: MaterialApp(
-        title: 'Lora App',
+        title: 'Find Your Cat',
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 229, 156, 150)),
         ),
         home: MyHomePage(),
       ),
@@ -36,19 +36,16 @@ class MyApp extends StatelessWidget {
 
 class MyAppState extends ChangeNotifier {
   final CollectionReference _gpsDataRef = FirebaseFirestore.instance.collection('gps_data');
-  final CollectionReference _commandsRef = FirebaseFirestore.instance.collection('commands');
 
   StreamSubscription<QuerySnapshot>? _gpsDataSubscription;
-  StreamSubscription<QuerySnapshot>? _commandSubscription;
   List<Map<String, dynamic>> gpsDataList = [];
   List<Map<String, dynamic>> commands = [];
 
   MyAppState() {
-    _startListeningForGPSData();
-    _startListeningForCommands();
+    _startListeningForData();
   }
 
-  void _startListeningForGPSData() {
+  void _startListeningForData() {
     print("Listening for GPS data... NEW");
     _gpsDataSubscription = _gpsDataRef.snapshots().listen((querySnapshot) {
       gpsDataList = querySnapshot.docs
@@ -67,22 +64,16 @@ class MyAppState extends ChangeNotifier {
     });
   }
 
-  void _startListeningForCommands() {
-    _commandSubscription = _commandsRef.snapshots().listen((querySnapshot) {
-      commands = querySnapshot.docs
-          .map((doc) => {
-            'command': doc['command'],
-            'timestamp': doc['timestamp']
-          })
-          .toList();
-      notifyListeners();
-    });
-  }
+  Map<String, dynamic>? get latestGpsData {
+      if (gpsDataList.isNotEmpty) {
+        return gpsDataList.last;
+      }
+      return null;
+    }
 
   @override
   void dispose() {
     _gpsDataSubscription?.cancel();
-    _commandSubscription?.cancel();
     super.dispose();
   }
 }
@@ -124,7 +115,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     NavigationRailDestination(
                       icon: Icon(Icons.history),
-                      label: Text('Favorites'),
+                      label: Text('History'),
                     ),
                   ],
                   selectedIndex: selectedIndex,
@@ -162,6 +153,7 @@ class _MainPageState extends State<MainPage> {
 
   // Firestore reference (you can change the collection and document paths as needed)
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
   void startCountdown() {
     setState(() {
       _start = 30; // Set countdown to 30 seconds
@@ -175,25 +167,36 @@ class _MainPageState extends State<MainPage> {
         });
       } else {
         timer.cancel(); // Cancel timer when countdown reaches zero
-        setState(() {
-          _isRunning = false; // Mark countdown as not running
-          _start = 0; // Reset start to 0 for display purposes
-        });
-    }
+        stopSpeaker(); // Stop the speaker when countdown reaches 0
+        }
     });
   }
 
   // Function to send a command to Firestore
-  void updateSpeakerCommand() async {
+  void startSpeaker() async {
     try {
       await _firestore.collection('commands').add({
         'timestamp': FieldValue.serverTimestamp(),
-        'command': 'speaker',
+        'command': 'start_speaker',
       });
       print("Speaker command sent to Firestore");
     } catch (e) {
       print("Error sending speaker command to Firestore: $e");
     }
+  }
+
+  void stopSpeaker() {
+    _timer?.cancel();
+    setState(() {
+      _isRunning = false;
+      _start = 0; // Reset countdown
+    });
+
+    // Send 'stop_speaker' command to Firestore
+    FirebaseFirestore.instance.collection('speakerCommands').add({
+      'timestamp': FieldValue.serverTimestamp(),
+      'command': 'stop_speaker',
+    });
   }
 
   @override
@@ -223,16 +226,7 @@ class _MainPageState extends State<MainPage> {
                     initialZoom: 13.0,
                   ),
                   children: [
-                    openStreetMapTileLayer,
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: LatLng(49.2827, -123.1207),
-                          child: Icon(Icons.location_on, color: Colors.red, size: 40),
-                        ),
-                        // Additional markers for pet locations can be added here
-                      ],
-                    ),
+                    map(),
                   ],
                 ),
               ),
@@ -262,12 +256,7 @@ class _MainPageState extends State<MainPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  children: [
-                    Icon(Icons.battery_full),
-                    Text("Battery Level"),
-                  ],
-                ),
+                BatteryIndicator(batteryLevel: 0.05), // Replace with actual battery level variable
                 Column(
                   children: [
                     Text("Last Checked"),
@@ -293,7 +282,7 @@ class _MainPageState extends State<MainPage> {
                       startCountdown(); // Start countdown if not running
                     }
                     // Send Firestore command for the speaker
-                    updateSpeakerCommand();                  
+                    startSpeaker();                  
                   },
 
                   style: ElevatedButton.styleFrom(
@@ -306,15 +295,30 @@ class _MainPageState extends State<MainPage> {
                   child: Text("Speaker"),
                 ),
                 SizedBox(width: 20),
-                if (_isRunning) // Show countdown only if running
+                if (_isRunning)
+                ...[
+                  // Countdown
                   Container(
                     width: 40,
                     alignment: Alignment.center,
                     child: Text(
-                      '$_start', // Replace with countdown timer value
+                      '$_start', // Display countdown value
                       style: TextStyle(fontSize: 20),
                     ),
                   ),
+                  SizedBox(width: 10),
+                  
+                  // Square Stop button
+                  Container(
+                    width: 50, // Set width for the square
+                    height: 50, // Set height for the square
+                    child: IconButton(
+                      onPressed: stopSpeaker, // Stop the speaker when pressed
+                      icon: Icon(Icons.stop, color: Colors.grey), // "X" icon in white
+                      iconSize: 30, // Icon size
+                    ),
+                  ),
+                ],
               ],
             ),
           ],
@@ -324,98 +328,63 @@ class _MainPageState extends State<MainPage> {
   }
 }
 
-// class MainPage extends StatefulWidget {
-//   @override
-//   _MainPageState createState() => _MainPageState();
-// }
-
-// class _MainPageState extends State<MainPage> {
-//   int _start = 0; // Variable to keep track of the countdown
-//   bool _isRunning = false; // Variable to check if countdown is running
-//   Timer? _timer; // Timer for countdown
-
-//   void startCountdown() {
-//     setState(() {
-//       _start = 30; // Set countdown to 30 seconds
-//       _isRunning = true; // Mark countdown as running
-//     });
-
-//     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-//       if (_start > 0) {
-//         setState(() {
-//           _start--; // Decrement countdown
-//         });
-//       } else {
-//         timer.cancel(); // Cancel timer when countdown reaches zero
-//         setState(() {
-//           _isRunning = false; // Mark countdown as not running
-//           _start = 0; // Reset start to 0 for display purposes
-//         });
-//       }
-//     });
-//   }
-
-//   @override
-//   void dispose() {
-//     _timer?.cancel(); // Cancel timer on dispose
-//     super.dispose();
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Center(
-//       child: Column(
-//         mainAxisAlignment: MainAxisAlignment.center,
-//         children: [
-//           Row(
-//             mainAxisSize: MainAxisSize.min,
-//             children: [
-//               ElevatedButton(
-//                 onPressed: () {
-//                   if (_isRunning) {
-//                     // Reset countdown if already running
-//                     setState(() {
-//                       _start = 30; // Reset countdown
-//                     });
-//                   } else {
-//                     startCountdown(); // Start countdown if not running
-//                   }
-//                 },
-//                 child: Text('Speaker'),
-//                 style: ElevatedButton.styleFrom(
-//                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-//                   minimumSize: Size(100, 50),
-//                   textStyle: TextStyle(fontSize: 16),
-//                 ),
-//               ),
-//               SizedBox(width: 10), // Space between button and countdown
-//               if (_isRunning) // Show countdown only if running
-//                 Container(
-//                   width: 40, // Set a width for the countdown display
-//                   alignment: Alignment.center,
-//                   child: Text(
-//                     '$_start',
-//                     style: TextStyle(fontSize: 20), // Larger font for countdown
-//                   ),
-//                 ),
-//             ],
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
 class HistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: map(),
+      body: historyMap(),
     );
   }
 }
 
-Widget map() {
+class BatteryIndicator extends StatelessWidget {
+  final double batteryLevel; // Battery level as a decimal, e.g., 0.75 for 75%.
+
+  BatteryIndicator({required this.batteryLevel});
+
+  @override
+  Widget build(BuildContext context) {
+    IconData batteryIcon;
+
+    if (batteryLevel > 0.8) {
+      batteryIcon = Icons.battery_full;
+    } else if (batteryLevel > 0.4) {
+      batteryIcon = Icons.battery_6_bar;
+    } else if (batteryLevel > 0.2) {
+      batteryIcon = Icons.battery_3_bar;
+    } else {
+      batteryIcon = Icons.battery_0_bar;
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 40, // Width of the battery indicator
+          child: LinearProgressIndicator(
+            value: batteryLevel,
+            backgroundColor: Colors.grey[300],
+            color: batteryLevel > 0.2 ? Colors.green : Colors.red,
+          ),
+        ),
+        SizedBox(height: 5), // Add vertical space
+        // Transform.rotate(
+        //   angle: 3.14159 / 2, // Rotate by 90 degrees (PI/2 radians)
+        //   child: Icon(
+        //     batteryIcon,
+        //     color: batteryLevel > 0.2 ? Colors.green : Colors.red,
+        //   ),
+        // ),
+        // SizedBox(height: 5), // Add vertical space between elements
+        Text("Battery Level: ${(batteryLevel * 100).toInt()}%"),
+      ],
+    );
+  }
+}
+
+
+
+Widget historyMap() {
   return FutureBuilder<Position>(
     future: _getCurrentLocation(),
     builder: (context, snapshot) {
@@ -459,6 +428,73 @@ Widget map() {
                   );
                 }).toList(),  // Convert map result to List<Marker>
             ];
+
+            return FlutterMap(
+              options: MapOptions(
+                initialCenter: initialCenter,
+                initialZoom: 13, // Set your preferred initial zoom level.
+                interactionOptions: const InteractionOptions(flags: ~InteractiveFlag.doubleTapZoom),
+              ),
+              children: [
+                openStreetMapTileLayer,
+                MarkerLayer(
+                  markers: markers,
+                ),
+              ],
+            );
+          },
+        );
+      }
+    },
+  );
+}
+
+Widget map() {
+  return FutureBuilder<Position>(
+    future: _getCurrentLocation(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        // Show a loading indicator while waiting for the location.
+        return Center(child: CircularProgressIndicator());
+      } else if (snapshot.hasError) {
+        // Show an error message if location cannot be accessed.
+        return Center(child: Text('Error: ${snapshot.error}'));
+      } else {
+        // Use the current location for the initial center of the map.
+        final position = snapshot.data;
+        final initialCenter = LatLng(position!.latitude, position.longitude);
+
+        return Consumer<MyAppState>(
+          builder: (context, appState, child) {
+            final latestPosition = appState.latestGpsData; // Get firebase GPS data
+
+            // Initialize the list of markers with the current location marker.
+            List<Marker> markers = [
+              Marker(
+                width: 80.0,
+                height: 80.0,
+                point: initialCenter,
+                alignment: Alignment.center,
+                child: Icon(Icons.location_on, color: Colors.red, size: 40),
+              ),
+            ];
+
+            // Add a black marker for the latest GPS data if it exists.
+            if (latestPosition != null && latestPosition.isNotEmpty) {
+              final latitude = latestPosition['lat'] as double;
+              final longitude = latestPosition['long'] as double;
+              final point = LatLng(latitude, longitude);
+
+              markers.add(
+                Marker(
+                  width: 80.0,
+                  height: 80.0,
+                  point: point,
+                  alignment: Alignment.center,
+                  child: Icon(Icons.location_on, color: Colors.black, size: 40),
+                ),
+              );
+            }
 
             return FlutterMap(
               options: MapOptions(
