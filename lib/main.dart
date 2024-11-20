@@ -193,7 +193,7 @@ class _MainPageState extends State<MainPage> {
     });
 
     // Send 'stop_speaker' command to Firestore
-    FirebaseFirestore.instance.collection('speakerCommands').add({
+    FirebaseFirestore.instance.collection('commands').add({
       'timestamp': FieldValue.serverTimestamp(),
       'command': 'stop_speaker',
     });
@@ -260,7 +260,7 @@ class _MainPageState extends State<MainPage> {
                 Column(
                   children: [
                     Text("Last Checked"),
-                    Text("10:09"), // Replace with dynamic timestamp
+                    Text("10:19"), // Replace with dynamic timestamp
                   ],
                 ),
               ],
