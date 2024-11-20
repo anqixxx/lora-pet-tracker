@@ -7,12 +7,22 @@
 #ifndef loraArduino_h
 #define loraArduino_h
 
-// include types & constants of Wiring core API
+// include
 #include "Arduino.h"
 #include "RH_RF95.h"
 #include "wiring.h"
 #include "SPI.h"
 #include "stdint.h"
+
+// constants
+#define PIN_CHIP_SELECT 12
+#define PIN_INTERRUPT 6
+#define DEFAULT_CARRIER_FREQUENCY 915
+#define DEFAULT_BANDWIDTH 125000
+#define DEFAULT_TX 15
+#define NORMAL_MODE_PERIOD 300
+#define SEARCH_MODE_PERIOD 60
+#define GPS_MESSAGE_LENGTH 20
 
 class loraArduino
 {
@@ -28,7 +38,8 @@ class loraArduino
       HISTORIC_GPS
     } MessageType;
 
-    loraArduino(uint8_t csPin, uint8_t intPin);
+    loraArduino(void);
+    bool init(void);
     void receiveMessage(void);
     void sendMessage(void);
 
@@ -37,7 +48,6 @@ class loraArduino
     RH_RF95 rf95;
     uint8_t searchMode;
     uint8_t GPSupdateTime;
-    float carrierFrequency;
 
     void sendAck(void);
     void buzz(void);

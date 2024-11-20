@@ -5,46 +5,99 @@
 // include this library's description file
 #include "loraArduino.h"
 
-#define PIN_CHIP_SELECT 12
-#define PIN_INTERRUPT 6
 
 // Constructor /////////////////////////////////////////////////////////////////
 // Function that handles the creation and setup of instances
 
-RH_RF95 rf95(PIN_CHIP_SELECT, PIN_INTERRUPT);
-
-loraArduino::loraArduino(int givenValue)
+loraArduino::loraArduino(void):rf95(PIN_CHIP_SELECT, PIN_INTERRUPT)
 {
-  // initialize this instance's variables
-  value = givenValue;
-
-  // do whatever is required to initialize the library
-  pinMode(13, OUTPUT);
-  Serial.begin(9600);
+  // start in normal mode with 
+  searchMode = false;
+  GPSupdateTime = NORMAL_MODE_PERIOD;
 }
 
 // Public Methods //////////////////////////////////////////////////////////////
 // Functions available in Wiring sketches, this library, and other libraries
 
-void loraArduino::doSomething(void)
+bool loraArduino::init(void)
 {
-  // eventhough this function is public, it can access
-  // and modify this library's private variables
-  Serial.print("value is ");
-  Serial.println(value);
+  if (rf95.init() == false){
+    return false;
+  }
+  else{
+    return true;
+  }
+  rf95.setFrequency(DEFAULT_CARRIER_FREQUENCY);
+}
 
-  // it can also call private functions of this library
-  doSomethingSecret();
+void loraArduino::receiveMessage(void)
+{
+  if (rf95.available())
+  {
+    byte buf[RH_RF95_MAX_MESSAGE_LEN];
+    byte len = sizeof(buf);
+    byte senderID;
+    byte messageType;
+
+    if (rf95.recv(*buf, &len))
+    {
+      memcpy(*senderID, *buf, 1);
+      memcpy(*messageType, *buf + 1, 1);
+      switch(messageType)
+      {
+        case BUZZ:
+          break;
+        case SEARCH_MODE:
+          break;
+        case CURRENT_GPS:
+          uint8_t output[GPS_MESSAGE_LENGTH];
+          memcpy(*output, *buf + 2, GPS_MESSAGE_LENGTH);
+          sendAck();
+          memcpy
+          break;
+        case CHANGE_SF:
+          byte newFrequency;
+          byte newBandwidth;
+          memcpy(*newFrequency, *buf + 2, 2); // not sure how long this would be actually
+          memcpy(*newBandwidth, *buf + 3, 2);
+          sendAck();
+          break;
+        case ACK:
+          break;
+        case HISTORIC_GPS:
+          break;
+      }
+    }
+  }
+}
+
+void loraArduino::sendMessage(void)
+{
+  
 }
 
 // Private Methods /////////////////////////////////////////////////////////////
 // Functions only available to other functions in this library
 
-void loraArduino::doSomethingSecret(void)
+void loraArduino::sendAck(void)
 {
-  digitalWrite(13, HIGH);
-  delay(200);
-  digitalWrite(13, LOW);
-  delay(200);
+  uint8_t ackMessage = 100;
+  rf95.send(*ackMessage, sizeof(ackMessage));
+  rf95.waitPacketSent();
+  return;
 }
 
+void loraArduino::buzz(void)
+{
+  
+}
+
+void loraArduino::receiveCurrentGPS(void)
+{
+  
+}
+
+void loraArduino::sendCurrentGPS(void)
+{
+  
+}
