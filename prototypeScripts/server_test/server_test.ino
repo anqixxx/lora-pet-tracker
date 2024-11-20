@@ -49,9 +49,10 @@ void setup()
 
   rf95.setFrequency(frequency); 
 
-  SerialUSB.println("Type 'r' to activate regular mode.");
+  SerialUSB.println("Type 'n' to activate normal mode.");
   SerialUSB.println("Type 's' to activate search mode.");
   SerialUSB.println("Type 'b' to activate buzzer.");
+  SerialUSB.println("Type 'g' to get GPS data.");
 
 
  // The default transmitter power is 13dBm, using PA_BOOST.
@@ -107,6 +108,10 @@ void loop()
       if (rf95.recv(buf, &len)){
         SerialUSB.print("got reply: ");
         SerialUSB.println((char*)buf);
+
+        uint8_t toSend[] = "ACK"; 
+        rf95.send(toSend, sizeof(toSend));
+        rf95.waitPacketSent();
       
       } else{
         SerialUSB.println("receiver didn't receive :(");
@@ -131,17 +136,21 @@ void handleSerialCommand(){
   SerialUSB.print("serial data Received: ");
   SerialUSB.println(serialCommand);
   if (serialCommand == "b"){
-      message = "b";
+      message = "buzz";
       messageToSend = true;
       SerialUSB.println("'buzzer' message locked and loaded");
   } else if (serialCommand == "s"){
-      message = "s";
+      message = "search";
       messageToSend = true;
       SerialUSB.println("'search mode' message locked and loaded");
   } else if (serialCommand == "n"){
-      message = "n";
+      message = "normal";
       messageToSend = true;
       SerialUSB.println("'normal mode' message locked and loaded");
+  } else if (serialCommand == "g"){
+      message = "gps";
+      messageToSend = true;
+      SerialUSB.println("'gps request' message locked and loaded");
   } else{
       SerialUSB.println("command not recognized");
   }

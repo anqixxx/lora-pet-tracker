@@ -1,70 +1,63 @@
 #include <Adafruit_GPS.h>
-
 #include <Adafruit_LSM6DSOX.h>
-
 #include <SPI.h>
-
 #include <RH_RF95.h> 
 
+uint32_t timer = millis();
+int freq = 30; // seconds
+
+// LoRa setup
 // We need to provide the RFM95 module's chip select and interrupt pins to the
 // rf95 instance below.On the SparkFun ProRF those pins are 12 and 6 respectively.
 RH_RF95 rf95(12, 6);
-
 int packetCounter = 0; //Counts the number of packets sent
 long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
-
 float frequency = 921.2; //Broadcast frequency
+int transmitting = 13;
 
-int LED = 13;
-
+// GPS setup
 Adafruit_GPS GPS(&Wire);
+int sleepGPS = 5;
 
+// IMU setup
 Adafruit_LSM6DSOX sox;
 
-#define GPSECHO false
-
-uint32_t timer1 = millis();
-
-int freq = 5000; // milliseconds
-
-int outputPin = 2;
-
+// Buzzer setup
+int buzzerPin = 2;
 int buzzLength = 500;
 
-int sleepGPS = 5;
 
 void setup()
 {
-  pinMode(LED, OUTPUT);
-  pinMode(sleepGPS, OUTPUT);
-  digitalWrite(sleepGPS, HIGH);
-  pinMode(outputPin, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
 
   while (!SerialUSB);
 
   SerialUSB.begin(115200);
   SerialUSB.println("Starting setup...");
 
+  // GPS setup
+  pinMode(sleepGPS, OUTPUT);
+  digitalWrite(sleepGPS, HIGH);
   GPS.begin(9600);
-
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ); // 1 Hz update rate
-
   GPS.sendCommand(PGCMD_ANTENNA);
+  digitalWrite(sleepGPS, LOW);
+  GPS.sendCommand("$PMTK225,4*2F");
 
+  // IMU setup
   if (!sox.begin_I2C(0x6B)) {
     SerialUSB.println("Failed to find LSM6DSOX chip");
     while (1) {
       delay(10);
     }
   }
-
   SerialUSB.println("LSM6DSOX Found!");
-
   setRanges();
 
-  //Initialize the Radio.
+  //LoRa setup
+  pinMode(transmitting, OUTPUT);
   if (rf95.init() == false){
     SerialUSB.println("Radio Init Failed - Freezing");
     while (1);
@@ -72,62 +65,121 @@ void setup()
   else{
     //An LED inidicator to let us know radio initialization has completed. 
     SerialUSB.println("Transmitter up!"); 
-    digitalWrite(LED, HIGH);
+    digitalWrite(transmitting, HIGH);
     delay(500);
-    digitalWrite(LED, LOW);
+    digitalWrite(transmitting, LOW);
     delay(500);
   }
 
   rf95.setFrequency(frequency);
-
-  // rf95.setTxPower(14, false);
+  rf95.setTxPower(14, false);
 
   delay(1000);
 }
 
 
-void loop() // run over and over again
+void loop()
 {
   if (rf95.available()){
-    // Should be a message for us now
     uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
     uint8_t len = sizeof(buf);
 
     if (rf95.recv(buf, &len)){
-      digitalWrite(LED, HIGH); //Turn on status LED
       timeSinceLastPacket = millis(); //Timestamp this packet
 
       SerialUSB.print("Got message: ");
       SerialUSB.print((char*)buf);
-      //SerialUSB.print(" RSSI: ");
-      //SerialUSB.print(rf95.lastRssi(), DEC);
       SerialUSB.println();
 
       // Send a reply
+      digitalWrite(transmitting, HIGH);
       uint8_t toSend[] = "ACK"; 
       rf95.send(toSend, sizeof(toSend));
       rf95.waitPacketSent();
-      SerialUSB.println("Sent a reply");
-      digitalWrite(LED, LOW); //Turn off status LED
+      digitalWrite(transmitting, LOW);
 
+      parseMessage((char*)buf);
     }
     else
       SerialUSB.println("Recieve failed");
   }
 
-  // if (millis() - timer1 > freq) {
-  //   timer1 = millis(); // reset the timer
-  //   char dataGPS[2][100] = {"",""};
-  //   getGPS(dataGPS);
-  //   SerialUSB.println(dataGPS[0]);
-  //   SerialUSB.println(dataGPS[1]);
+  if (millis() - timer > freq * 1000) {
+    timer = millis(); // reset the timer
+    char dataGPS[2][100] = {"",""};
+    getGPS(dataGPS);
+    SerialUSB.print(dataGPS[0]);
+    SerialUSB.println(dataGPS[1]);
+    GPSToSend = dataGPS[0] + "," dataGPS[1];
 
-  //   int dataIMU[3][3] = {};
-  //   pollIMU(dataIMU);
-  //   SerialUSB.println(dataIMU[0][0]);
+    int dataIMU[3][3] = {};
+    pollIMU(dataIMU);
+    SerialUSB.println(dataIMU[0][0]);
 
-  //   buzz();
-  // }
+    sent = sendMessage(GPSToSend);
+    while (!sent) {
+      SerialUSB.println("Retransmitting...");
+      sent = sendMessage(GPSToSend);
+    }
+  }
+}
+
+bool sendMessage(char message, int timeout=2000)
+{
+  digitalWrite(transmitting, HIGH);
+  uint8_t toSend[] = message; 
+  rf95.send(toSend, sizeof(toSend));
+  rf95.waitPacketSent();
+  SerialUSB.println("Sent");
+  digitalWrite(transmitting, LOW);
+
+  delay(100);
+
+  // wait for ack
+  uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+  uint8_t len = sizeof(buf);
+
+  if (rf95.waitAvailableTimeout(timeout)) {
+    if (rf95.recv(buf, &len)) {
+      SerialUSB.print("Got reply: ");
+      SerialUSB.println((char*)buf);
+      if ((char*)buf == "ACK") {
+        return true;
+      }
+      return false;
+    }
+    else {
+      SerialUSB.println("Receive failed");
+      return false;
+    }
+  else {
+    SerialUSB.println("No reply");
+    return false;
+  }
+}
+
+void parseMessage(char message)
+{
+  switch (message) {
+  case "buzz":
+    buzz();
+    break;
+  case "gps":
+    char dataGPS[2][100] = {"",""};
+    getGPS(dataGPS);
+    GPSToSend = dataGPS[0] + "," dataGPS[1];
+    sent = sendMessage(GPSToSend);
+    while (!sent) {
+      SerialUSB.println("Retransmitting...");
+      sent = sendMessage(GPSToSend);
+    break;
+  case "search":
+    freq = 10;
+    break;
+  case "normal":
+    freq = 30;
+    break;
+  }
 }
 
 void setRanges()
@@ -269,6 +321,7 @@ void pollIMU(int dataIMU[3][3])
 void getGPS(char dataGPS[2][100])
 {
   // wake up gps
+  digitalWrite(sleepGPS, HIGH);
   // wait for fix (but don't actually)
   const char *wait = "$GNGGA";
   if (GPS.waitForSentence(wait))
@@ -278,18 +331,17 @@ void getGPS(char dataGPS[2][100])
     strcpy(dataGPS[1], GPS.lastNMEA());
 
   // put GPS back to sleep
+  digitalWrite(sleepGPS, LOW);
+  GPS.sendCommand("$PMTK225,4*2F");
 }
 
 void buzz()
 {
   uint32_t buzzTimer = millis();
-  // SerialUSB.println(buzzTimer);
   while (millis() - buzzTimer < buzzLength) {
-    // SerialUSB.println(millis() - buzzTimer);
-    digitalWrite(outputPin, HIGH);
+    digitalWrite(buzzerPin, HIGH);
     delayMicroseconds(500);
-    digitalWrite(outputPin, LOW);
+    digitalWrite(buzzerPin, LOW);
     delayMicroseconds(500);
-    // tone(outputPin, 2000);
   }
 }
