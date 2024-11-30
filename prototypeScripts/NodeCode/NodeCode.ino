@@ -2,6 +2,8 @@
 #include <Adafruit_LSM6DSOX.h>
 #include <SPI.h>
 #include <RH_RF95.h>
+#include <Wire.h>
+#include <Adafruit_I2CDevice.h>
 
 uint32_t timer = millis();
 int period = 30;  // seconds
@@ -17,13 +19,17 @@ int transmitting = 13;
 
 // GPS setup
 Adafruit_GPS GPS(&Wire);
-int sleepGPS = 5;
+#define GPS_SLEEP_PIN 5
 
 // IMU setup
 Adafruit_LSM6DSOX sox;
+// Define the interrupt pin (connected to the IMU's interrupt pin)
+#define IMU_INT_PIN 4 // ? check pin
+// Flag to indicate a wake event
+volatile bool wakeEventDetected = false;
 
 // Buzzer setup
-int buzzerPin = 2;
+#define BUZZER_PIN 2
 int buzzLength = 500;
 
 // toggles (should write these states to memory in case node turns off/gets disconnected (same on base side))
@@ -167,7 +173,7 @@ void pollIMU(int dataIMU[3][3]) {
 
 uint8_t* getGPS() {
   // wake up gps
-  digitalWrite(sleepGPS, HIGH);
+  digitalWrite(GPS_SLEEP_PIN, HIGH);
   // wait for fix (but don't actually)
 
   // const char *wait = "$GPRMC";
@@ -179,7 +185,7 @@ uint8_t* getGPS() {
   }
 
   // put GPS back to sleep
-  digitalWrite(sleepGPS, LOW);
+  digitalWrite(GPS_SLEEP_PIN, LOW);
   GPS.sendCommand("$PMTK225,4*2F");
 
   uint8_t lat = (GPS.lat == 'S');  // 0 if N, 1 if S
@@ -214,9 +220,9 @@ uint8_t* getGPS() {
 void buzz() {
   uint32_t buzzTimer = millis();
   while (millis() - buzzTimer < buzzLength) {
-    digitalWrite(buzzerPin, HIGH);
+    digitalWrite(BUZZER_PIN, HIGH);
     delayMicroseconds(500);
-    digitalWrite(buzzerPin, LOW);
+    digitalWrite(BUZZER_PIN, LOW);
     delayMicroseconds(500);
   }
 }
@@ -273,24 +279,27 @@ void parseMessage(int messageID) {
   }
 }
 
+void handleWakeInterrupt() {
+  wakeEventDetected = true;
+}
+
 
 void setup() {
-  pinMode(buzzerPin, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
 
-  while (!SerialUSB)
-    ;
+  while (!SerialUSB);
 
   SerialUSB.begin(115200);
   SerialUSB.println("Starting setup...");
 
   // GPS setup
-  pinMode(sleepGPS, OUTPUT);
-  digitalWrite(sleepGPS, HIGH);
+  pinMode(GPS_SLEEP_PIN, OUTPUT);
+  digitalWrite(GPS_SLEEP_PIN, HIGH);
   GPS.begin(9600);
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);  // 1 Hz update rate
   GPS.sendCommand(PGCMD_ANTENNA);
-  digitalWrite(sleepGPS, LOW);
+  digitalWrite(GPS_SLEEP_PIN, LOW);
   GPS.sendCommand("$PMTK225,4*2F");
 
   // IMU setup
@@ -302,6 +311,13 @@ void setup() {
   }
   SerialUSB.println("LSM6DSOX Found!");
   setRanges();
+  uint8_t duration = 50;
+  uint8_t thresh = 5;   // Example threshold (adjust as needed)
+  sox.enableWakeup(true, duration, thresh);
+  // Configure the interrupt pin
+  pinMode(IMU_INT_PIN, INPUT);
+  // Attach the interrupt
+  attachInterrupt(digitalPinToInterrupt(IMU_INT_PIN), handleWakeInterrupt, RISING);
 
   //LoRa setup
   pinMode(transmitting, OUTPUT);
@@ -326,11 +342,26 @@ void setup() {
 
 
 void loop() {
+  // Check if the interrupt detected a wake event
+  if (wakeEventDetected) {
+    wakeEventDetected = false; // Clear the flag
+
+    // Verify the wake event using the `awake()` function
+    if (sox.awake()) {
+      SerialUSB.println("Wake event detected!");
+      // Perform additional actions here
+        int dataIMU[3][3] = {};
+        pollIMU(dataIMU);
+        SerialUSB.println(dataIMU[0][0]);
+    }
+  }
+
   if (rf95.available()) {
     uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
     uint8_t len = sizeof(buf);
 
-    if (
+    if (rf95.recv(buf, &len)){
+      timeSinceLastPacket = millis(); //Timestamp this packet/
       SerialUSB.print("Got message: ");
       SerialUSB.print((char*)buf);
       SerialUSB.println();
@@ -343,24 +374,20 @@ void loop() {
       digitalWrite(transmitting, LOW);
 
       parseMessage(buf[0]);
-  } else {
-    SerialUSB.println("Recieve failed");
+    } else {
+      SerialUSB.println("Recieve failed");
+    }
   }
-}
 
-int dataIMU[3][3] = {};
-pollIMU(dataIMU);
-SerialUSB.println(dataIMU[0][0]);
+  if (millis() - timer > ((period - 20 * searchToggle) * 1000)) {
+    timer = millis();  // reset the timer
 
-if (millis() - timer > ((period - 20 * searchToggle) * 1000)) {
-  timer = millis();  // reset the timer
+    if (buzzerToggle) buzz();
 
-  if (buzzerToggle) buzz();
-
-  bool sent = sendSingleGPS();
-  while (!sent) {
-    SerialUSB.println("Retransmitting...");
-    sent = sendSingleGPS();
+    bool sent = sendSingleGPS();
+    while (!sent) {
+      SerialUSB.println("Retransmitting...");
+      sent = sendSingleGPS();
+    }
   }
-}
 }
