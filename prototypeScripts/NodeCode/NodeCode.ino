@@ -1,9 +1,13 @@
+//LoRa Node Code
+//ENPH 479
+//2468 LoRa Pet Tracker
+
 #include <Adafruit_GPS.h>
-#include <Adafruit_LSM6DSOX.h>
 #include <SPI.h>
 #include <RH_RF95.h>
 #include <Wire.h>
 #include <Adafruit_I2CDevice.h>
+#include <LSM6DS.h>
 
 uint32_t timer = millis();
 int period = 30;  // seconds
@@ -20,13 +24,15 @@ int transmitting = 13;
 // GPS setup
 Adafruit_GPS GPS(&Wire);
 #define GPS_SLEEP_PIN 5
+#define GPS_MESSAGE_TYPE 5
+#define GPS_SIZE 16
 
 // IMU setup
-Adafruit_LSM6DSOX sox;
+LSM6DS sox;
 // Define the interrupt pin (connected to the IMU's interrupt pin)
 #define IMU_INT_PIN 4 // ? check pin
-// Flag to indicate a wake event
-volatile bool wakeEventDetected = false;
+// // Flag to indicate a wake event
+volatile bool activityEventDetected = false;
 
 // Buzzer setup
 #define BUZZER_PIN 2
@@ -37,138 +43,16 @@ bool buzzerToggle = false;
 bool searchToggle = false;
 
 
-void setRanges() {
-  // sox.setAccelRange(LSM6DS_ACCEL_RANGE_2_G);
-  SerialUSB.print("Accelerometer range set to: ");
-  switch (sox.getAccelRange()) {
-    case LSM6DS_ACCEL_RANGE_2_G:
-      SerialUSB.println("+-2G");
-      break;
-    case LSM6DS_ACCEL_RANGE_4_G:
-      SerialUSB.println("+-4G");
-      break;
-    case LSM6DS_ACCEL_RANGE_8_G:
-      SerialUSB.println("+-8G");
-      break;
-    case LSM6DS_ACCEL_RANGE_16_G:
-      SerialUSB.println("+-16G");
-      break;
-  }
-
-  // sox.setGyroRange(LSM6DS_GYRO_RANGE_250_DPS );
-  SerialUSB.print("Gyro range set to: ");
-  switch (sox.getGyroRange()) {
-    case LSM6DS_GYRO_RANGE_125_DPS:
-      SerialUSB.println("125 degrees/s");
-      break;
-    case LSM6DS_GYRO_RANGE_250_DPS:
-      SerialUSB.println("250 degrees/s");
-      break;
-    case LSM6DS_GYRO_RANGE_500_DPS:
-      SerialUSB.println("500 degrees/s");
-      break;
-    case LSM6DS_GYRO_RANGE_1000_DPS:
-      SerialUSB.println("1000 degrees/s");
-      break;
-    case LSM6DS_GYRO_RANGE_2000_DPS:
-      SerialUSB.println("2000 degrees/s");
-      break;
-    case ISM330DHCX_GYRO_RANGE_4000_DPS:
-      break;  // unsupported range for the DSOX
-  }
-
-  // sox.setAccelDataRate(LSM6DS_RATE_12_5_HZ);
-  SerialUSB.print("Accelerometer data rate set to: ");
-  switch (sox.getAccelDataRate()) {
-    case LSM6DS_RATE_SHUTDOWN:
-      SerialUSB.println("0 Hz");
-      break;
-    case LSM6DS_RATE_12_5_HZ:
-      SerialUSB.println("12.5 Hz");
-      break;
-    case LSM6DS_RATE_26_HZ:
-      SerialUSB.println("26 Hz");
-      break;
-    case LSM6DS_RATE_52_HZ:
-      SerialUSB.println("52 Hz");
-      break;
-    case LSM6DS_RATE_104_HZ:
-      SerialUSB.println("104 Hz");
-      break;
-    case LSM6DS_RATE_208_HZ:
-      SerialUSB.println("208 Hz");
-      break;
-    case LSM6DS_RATE_416_HZ:
-      SerialUSB.println("416 Hz");
-      break;
-    case LSM6DS_RATE_833_HZ:
-      SerialUSB.println("833 Hz");
-      break;
-    case LSM6DS_RATE_1_66K_HZ:
-      SerialUSB.println("1.66 KHz");
-      break;
-    case LSM6DS_RATE_3_33K_HZ:
-      SerialUSB.println("3.33 KHz");
-      break;
-    case LSM6DS_RATE_6_66K_HZ:
-      SerialUSB.println("6.66 KHz");
-      break;
-  }
-
-  // sox.setGyroDataRate(LSM6DS_RATE_12_5_HZ);
-  SerialUSB.print("Gyro data rate set to: ");
-  switch (sox.getGyroDataRate()) {
-    case LSM6DS_RATE_SHUTDOWN:
-      SerialUSB.println("0 Hz");
-      break;
-    case LSM6DS_RATE_12_5_HZ:
-      SerialUSB.println("12.5 Hz");
-      break;
-    case LSM6DS_RATE_26_HZ:
-      SerialUSB.println("26 Hz");
-      break;
-    case LSM6DS_RATE_52_HZ:
-      SerialUSB.println("52 Hz");
-      break;
-    case LSM6DS_RATE_104_HZ:
-      SerialUSB.println("104 Hz");
-      break;
-    case LSM6DS_RATE_208_HZ:
-      SerialUSB.println("208 Hz");
-      break;
-    case LSM6DS_RATE_416_HZ:
-      SerialUSB.println("416 Hz");
-      break;
-    case LSM6DS_RATE_833_HZ:
-      SerialUSB.println("833 Hz");
-      break;
-    case LSM6DS_RATE_1_66K_HZ:
-      SerialUSB.println("1.66 KHz");
-      break;
-    case LSM6DS_RATE_3_33K_HZ:
-      SerialUSB.println("3.33 KHz");
-      break;
-    case LSM6DS_RATE_6_66K_HZ:
-      SerialUSB.println("6.66 KHz");
-      break;
-  }
-}
-
 void pollIMU(int dataIMU[3][3]) {
   sensors_event_t accel;
-  sensors_event_t gyro;
   sensors_event_t temp;
-  sox.getEvent(&accel, &gyro, &temp);
+  sox.getEvent(&accel, &temp);
 
   dataIMU[0][0] = temp.temperature;
   /* acceleration is measured in m/s^2 */
   dataIMU[1][0] = accel.acceleration.x;
   dataIMU[1][1] = accel.acceleration.y;
   dataIMU[1][2] = accel.acceleration.z;
-  /* rotation is measured in rad/s */
-  dataIMU[2][0] = gyro.gyro.x;
-  dataIMU[2][1] = gyro.gyro.x;
-  dataIMU[2][2] = gyro.gyro.x;
 }
 
 uint8_t* getGPS() {
@@ -191,7 +75,7 @@ uint8_t* getGPS() {
   uint8_t lat = (GPS.lat == 'S');  // 0 if N, 1 if S
   uint8_t lon = (GPS.lon == 'W');  // 0 if E, 1 if W
 
-  uint8_t dataGPS[16];
+  uint8_t dataGPS[GPS_SIZE];
 
   // format gps data
   dataGPS[0] = 20;
@@ -227,8 +111,12 @@ void buzz() {
   }
 }
 
-bool sendSingleGPS(int timeout = 2000) {
-  uint8_t* toSend = getGPS();
+bool sendSingleGPS(uint8_t messageID, int timeout = 2000) {
+  uint8_t message[18];
+  message[0] = messageID;
+  message[1] = GPS_MESSAGE_TYPE;
+  memcpy(message+2, getGPS(), GPS_SIZE);
+  uint8_t* toSend = message;
   digitalWrite(transmitting, HIGH);
   rf95.send(toSend, sizeof(toSend));
   rf95.waitPacketSent();
@@ -257,8 +145,8 @@ bool sendSingleGPS(int timeout = 2000) {
   }
 }
 
-void parseMessage(int messageID) {
-  switch (messageID) {
+void parseMessage(int messageType) {
+  switch (messageType) {
     case 0:  // buzz
       buzzerToggle = !buzzerToggle;
       break;
@@ -267,10 +155,12 @@ void parseMessage(int messageID) {
       break;
     case 2:  // send 1000 gps (1 for now)
       // move this stuff to function so we don't have to repeat it
-      bool sent = sendSingleGPS();
+      bool sent = sendSingleGPS(0);
+      int i = 1;
       while (!sent) {
         SerialUSB.println("Retransmitting...");
-        sent = sendSingleGPS();
+        sent = sendSingleGPS(i);
+        i++;
       }
       break;
       // case 3: // change SF and BW
@@ -279,10 +169,9 @@ void parseMessage(int messageID) {
   }
 }
 
-void handleWakeInterrupt() {
-  wakeEventDetected = true;
-}
-
+// void handleWakeInterrupt() {
+//   activityEventDetected = true;
+// }
 
 void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
@@ -303,21 +192,22 @@ void setup() {
   GPS.sendCommand("$PMTK225,4*2F");
 
   // IMU setup
-  if (!sox.begin_I2C(0x6B)) {
+  if (!sox.begin_I2C()) {
     SerialUSB.println("Failed to find LSM6DSOX chip");
     while (1) {
       delay(10);
     }
   }
   SerialUSB.println("LSM6DSOX Found!");
-  setRanges();
-  uint8_t duration = 50;
-  uint8_t thresh = 5;   // Example threshold (adjust as needed)
-  sox.enableWakeup(true, duration, thresh);
+  sox.setAccelDataRate(LSM6DS_RATE_12_5_HZ);
+  uint8_t wakeup_duration = 1;
+  uint8_t thresh = 2;   // Example threshold (adjust as needed)
+  uint8_t sleep_duration = 1;
+  sox.enableActivityInactivity(true, true, wakeup_duration, thresh, sleep_duration, false);
   // Configure the interrupt pin
   pinMode(IMU_INT_PIN, INPUT);
   // Attach the interrupt
-  attachInterrupt(digitalPinToInterrupt(IMU_INT_PIN), handleWakeInterrupt, RISING);
+  // attachInterrupt(digitalPinToInterrupt(IMU_INT_PIN), handleWakeInterrupt, CHANGE);
 
   //LoRa setup
   pinMode(transmitting, OUTPUT);
@@ -342,18 +232,23 @@ void setup() {
 
 
 void loop() {
-  // Check if the interrupt detected a wake event
-  if (wakeEventDetected) {
-    wakeEventDetected = false; // Clear the flag
+  // Verify the activity status using the 'activityStatus()` function, can also read pin
+  if (!sox.activityStatus()){ // if active
+    if (millis() - timer > ((period - 20 * searchToggle) * 1000)) {
+      timer = millis();  // reset the timer
 
-    // Verify the wake event using the `awake()` function
-    if (sox.awake()) {
-      SerialUSB.println("Wake event detected!");
-      // Perform additional actions here
-        int dataIMU[3][3] = {};
-        pollIMU(dataIMU);
-        SerialUSB.println(dataIMU[0][0]);
+      if (buzzerToggle) buzz();
+
+      bool sent = sendSingleGPS(0);
+      int i = 1;
+      while (!sent) {
+        SerialUSB.println("Retransmitting...");
+        sent = sendSingleGPS(i);
+        i++;
+      }
     }
+  } else {
+    SerialUSB.println("Sleeping...");
   }
 
   if (rf95.available()) {
@@ -373,21 +268,11 @@ void loop() {
       rf95.waitPacketSent();
       digitalWrite(transmitting, LOW);
 
-      parseMessage(buf[0]);
+      parseMessage(buf[1]);
     } else {
       SerialUSB.println("Recieve failed");
     }
   }
 
-  if (millis() - timer > ((period - 20 * searchToggle) * 1000)) {
-    timer = millis();  // reset the timer
-
-    if (buzzerToggle) buzz();
-
-    bool sent = sendSingleGPS();
-    while (!sent) {
-      SerialUSB.println("Retransmitting...");
-      sent = sendSingleGPS();
-    }
-  }
+  
 }
