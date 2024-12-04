@@ -21,6 +21,8 @@ long timeSinceLastPacket = 0;  //Tracks the time stamp of last packet received
 float frequency = 921.2;       //Broadcast frequency
 int transmitting = 13;
 
+volatile int messageID = 0;
+
 // GPS setup
 Adafruit_GPS GPS(&Wire);
 #define GPS_SLEEP_PIN 5
@@ -36,7 +38,7 @@ volatile bool activityEventDetected = false;
 
 // Buzzer setup
 #define BUZZER_PIN 2
-int buzzLength = 500;
+int buzzLength = 800;
 
 // toggles (should write these states to memory in case node turns off/gets disconnected (same on base side))
 bool buzzerToggle = false;
@@ -55,7 +57,7 @@ void pollIMU(int dataIMU[3][3]) {
   dataIMU[1][2] = accel.acceleration.z;
 }
 
-uint8_t* getGPS() {
+void getGPS(uint8_t dataGPS[]) {
   // wake up gps
   digitalWrite(GPS_SLEEP_PIN, HIGH);
   // wait for fix (but don't actually)
@@ -75,7 +77,7 @@ uint8_t* getGPS() {
   uint8_t lat = (GPS.lat == 'S');  // 0 if N, 1 if S
   uint8_t lon = (GPS.lon == 'W');  // 0 if E, 1 if W
 
-  uint8_t dataGPS[GPS_SIZE];
+  // uint8_t dataGPS[GPS_SIZE];
 
   // format gps data
   dataGPS[0] = 20;
@@ -95,43 +97,93 @@ uint8_t* getGPS() {
   dataGPS[12] = (lonDD >> 16) & 0xFF;
   dataGPS[13] = (lonDD >> 8) & 0xFF;
   dataGPS[14] = lonDD & 0xFF;
-  // dataGPS[15] = (lat << 1) | lon; // most of the byte will be 0
   dataGPS[15] = 100;  // battery status
-
-  return dataGPS;
 }
 
 void buzz() {
   uint32_t buzzTimer = millis();
-  while (millis() - buzzTimer < buzzLength) {
-    digitalWrite(BUZZER_PIN, HIGH);
-    delayMicroseconds(500);
-    digitalWrite(BUZZER_PIN, LOW);
-    delayMicroseconds(500);
-  }
+  digitalWrite(BUZZER_PIN, HIGH);
+  delayMicroseconds(500);
+  digitalWrite(BUZZER_PIN, LOW);
+  delayMicroseconds(500);
 }
 
-bool sendSingleGPS(uint8_t messageID, int timeout = 2000) {
+bool sendSingleGPS(int timeout = 2000) {
   uint8_t message[18];
   message[0] = messageID;
   message[1] = GPS_MESSAGE_TYPE;
-  memcpy(message+2, getGPS(), GPS_SIZE);
-  uint8_t* toSend = message;
+  uint8_t dataGPS[GPS_SIZE];
+  getGPS(dataGPS);
+  memcpy(&message[2], dataGPS, GPS_SIZE);
   digitalWrite(transmitting, HIGH);
-  rf95.send(toSend, sizeof(toSend));
+  rf95.send(message, 18);
   rf95.waitPacketSent();
-  SerialUSB.println("Sent");
+  SerialUSB.print("Sent: ");
+  for (uint8_t x : message) {
+    SerialUSB.print(x);
+    SerialUSB.print(' ');
+  }
+  SerialUSB.println();
   digitalWrite(transmitting, LOW);
 
-  // wait for ack
+  messageID++;
+
+  return waitForACK();
+}
+
+void parseMessage(int messageType) {
+  switch (messageType) {
+    case 0:  // buzz
+      SerialUSB.println("Buzz");
+      buzzerToggle = !buzzerToggle;
+      break;
+    case 1:  // toggle frequency
+      SerialUSB.println("Toggle mode");
+      searchToggle = !searchToggle;
+      break;
+    case 2:  // send 1000 gps (1 for now)
+      SerialUSB.println("Send GPS");
+      // move this stuff to function so we don't have to repeat it
+      // delay(500);
+      bool sent = sendSingleGPS();
+      int i = 1;
+      while (!sent) {
+        SerialUSB.println("Retransmitting...");
+        SerialUSB.println(i);
+        sent = sendSingleGPS(i);
+        i++;
+      }
+      break;
+      // case 3: // change SF and BW
+
+      //   break;
+  }
+}
+
+bool sendACK() {
+  digitalWrite(transmitting, HIGH);
+  uint8_t toSend[] = {messageID, 4}; 
+  rf95.send(toSend, sizeof(toSend));
+  rf95.waitPacketSent();
+  SerialUSB.println("Sent ACK");
+  digitalWrite(transmitting, LOW);
+
+  messageID++;
+
+  return true;
+}
+
+bool waitForACK() {
   uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
   uint8_t len = sizeof(buf);
 
-  if (rf95.waitAvailableTimeout(timeout)) {
+  if (rf95.waitAvailableTimeout(2000)) {
     if (rf95.recv(buf, &len)) {
       SerialUSB.print("Got reply: ");
-      SerialUSB.println((char*)buf);
-      if ((char*)buf == "ACK") {
+      SerialUSB.print(buf[0]);
+      SerialUSB.println(buf[1]);
+      if (buf[1] == 4) {
+        SerialUSB.println("Success: Got ACK");
         return true;
       }
       return false;
@@ -145,33 +197,10 @@ bool sendSingleGPS(uint8_t messageID, int timeout = 2000) {
   }
 }
 
-void parseMessage(int messageType) {
-  switch (messageType) {
-    case 0:  // buzz
-      buzzerToggle = !buzzerToggle;
-      break;
-    case 1:  // toggle frequency
-      searchToggle = !searchToggle;
-      break;
-    case 2:  // send 1000 gps (1 for now)
-      // move this stuff to function so we don't have to repeat it
-      bool sent = sendSingleGPS(0);
-      int i = 1;
-      while (!sent) {
-        SerialUSB.println("Retransmitting...");
-        sent = sendSingleGPS(i);
-        i++;
-      }
-      break;
-      // case 3: // change SF and BW
-
-      //   break;
-  }
+void handleActivityInterrupt() {
+  // activityEventDetected = true;
+  SerialUSB.println("Sleeping...");
 }
-
-// void handleWakeInterrupt() {
-//   activityEventDetected = true;
-// }
 
 void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
@@ -204,17 +233,17 @@ void setup() {
   uint8_t thresh = 2;   // Example threshold (adjust as needed)
   uint8_t sleep_duration = 1;
   sox.enableActivityInactivity(true, true, wakeup_duration, thresh, sleep_duration, false);
+  sox.configInt1(false, false, false, false, true);
   // Configure the interrupt pin
   pinMode(IMU_INT_PIN, INPUT);
   // Attach the interrupt
-  // attachInterrupt(digitalPinToInterrupt(IMU_INT_PIN), handleWakeInterrupt, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(IMU_INT_PIN), handleActivityInterrupt, CHANGE);
 
   //LoRa setup
   pinMode(transmitting, OUTPUT);
   if (rf95.init() == false) {
     SerialUSB.println("Radio Init Failed - Freezing");
-    while (1)
-      ;
+    while (1);
   } else {
     //An LED inidicator to let us know radio initialization has completed.
     SerialUSB.println("Transmitter up!");
@@ -237,18 +266,17 @@ void loop() {
     if (millis() - timer > ((period - 20 * searchToggle) * 1000)) {
       timer = millis();  // reset the timer
 
-      if (buzzerToggle) buzz();
-
-      bool sent = sendSingleGPS(0);
+      bool sent = sendSingleGPS();
       int i = 1;
       while (!sent) {
         SerialUSB.println("Retransmitting...");
+        SerialUSB.println(i);
         sent = sendSingleGPS(i);
         i++;
       }
     }
   } else {
-    SerialUSB.println("Sleeping...");
+    // SerialUSB.println("Sleeping...");
   }
 
   if (rf95.available()) {
@@ -256,22 +284,22 @@ void loop() {
     uint8_t len = sizeof(buf);
 
     if (rf95.recv(buf, &len)){
-      timeSinceLastPacket = millis(); //Timestamp this packet/
+      // timeSinceLastPacket = millis(); //Timestamp this packet/
       SerialUSB.print("Got message: ");
-      SerialUSB.print((char*)buf);
+      SerialUSB.print(buf[0]);
+      SerialUSB.print(buf[1]);
       SerialUSB.println();
 
-      // Send a reply
-      digitalWrite(transmitting, HIGH);
-      uint8_t toSend[] = "ACK"; 
-      rf95.send(toSend, sizeof(toSend));
-      rf95.waitPacketSent();
-      digitalWrite(transmitting, LOW);
+      sendACK();
 
       parseMessage(buf[1]);
     } else {
       SerialUSB.println("Recieve failed");
     }
+  }
+
+  if (buzzerToggle) {
+    buzz();
   }
 
   

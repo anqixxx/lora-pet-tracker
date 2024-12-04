@@ -24,6 +24,69 @@ float frequency = 921.2; //americas
 
 volatile int messageID = 0;
 
+
+void handleSerialCommand(){
+  String serialCommand = SerialUSB.readStringUntil('\n'); // read input until newline
+  serialCommand.trim();
+  SerialUSB.print("serial data Received: ");
+  SerialUSB.println(serialCommand);
+  if (serialCommand == "b"){
+      message[0] = messageID;
+      message[1] = 0;
+      messageToSend = true;
+      SerialUSB.println("'buzzer' message locked and loaded");
+  } else if (serialCommand == "s"){
+      message[0] = messageID;
+      message[1] = 1;
+      messageToSend = true;
+      SerialUSB.println("'search mode toggle' message locked and loaded");
+  } else if (serialCommand == "g"){
+      message[0] = messageID;
+      message[1] = 2;
+      messageToSend = true;
+      SerialUSB.println("'gps request' message locked and loaded");
+  } else{
+      SerialUSB.println("command not recognized");
+  }
+}
+
+bool sendACK() {
+  digitalWrite(LED, HIGH);
+  uint8_t toSend[] = {messageID, 4}; 
+  rf95.send(toSend, sizeof(toSend));
+  rf95.waitPacketSent();
+  SerialUSB.println("Sent ACK");
+  digitalWrite(LED, LOW);
+
+  messageID++;
+
+  return true;
+}
+
+bool waitForACK() {
+  uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+  uint8_t len = sizeof(buf);
+
+  if (rf95.waitAvailableTimeout(2000)) {
+    if (rf95.recv(buf, &len)) {
+      SerialUSB.print("Got reply: ");
+      SerialUSB.print(buf[0]);
+      SerialUSB.println(buf[1]);
+      if (buf[1] == 4) {
+        SerialUSB.println("Success: Got ACK");
+        return true;
+      }
+      return false;
+    } else {
+      SerialUSB.println("Receive failed");
+      return false;
+    }
+  } else {
+    SerialUSB.println("No reply");
+    return false;
+  }
+}
+
 void setup()
 {
   pinMode(LED, OUTPUT);
@@ -47,13 +110,12 @@ void setup()
     delay(500);
   }
 
-  rf95.setFrequency(frequency); 
+  rf95.setFrequency(frequency);
+  rf95.setTxPower(14, false); 
 
   SerialUSB.println("Type 's' to toggle search mode.");
   SerialUSB.println("Type 'b' to toggle buzzer.");
   SerialUSB.println("Type 'g' to get GPS data.");
-
-  rf95.setTxPower(14, false);
 }
 
 void loop()
@@ -82,17 +144,9 @@ void loop()
           SerialUSB.print(" ");
         }
       }
-    
-      //SerialUSB.print(" RSSI: ");
-      //SerialUSB.print(rf95.lastRssi(), DEC);
       SerialUSB.println();
 
-      // Send a reply
-      uint8_t toSend[] = "ACK"; 
-      rf95.send(toSend, sizeof(toSend));
-      rf95.waitPacketSent();
-      SerialUSB.println("Sent a reply");
-      digitalWrite(LED, LOW); //Turn off status LED
+      sendACK();
     }
     else
       SerialUSB.println("Recieve failed");
@@ -108,59 +162,14 @@ void loop()
     rf95.send(message, sizeof(message));
     rf95.waitPacketSent();
 
-    //wait for reply
-    byte buf[RH_RF95_MAX_MESSAGE_LEN];
-    byte len = sizeof(buf);
-    if (rf95.waitAvailableTimeout(2000)){
-      if (rf95.recv(buf, &len)){
-        SerialUSB.print("got reply: ");
-        SerialUSB.println((char*)buf);
-        // check if ACK
-      } else{
-        SerialUSB.println("receiver didn't receive :(");
-      }
-    } else {
-      SerialUSB.println("no reply... is the receiver running?");
-    }
-    messageToSend = false;
-
+    messageToSend = !waitForACK();
+    messageID++;
   }
 
   if (SerialUSB.available() > 0) {
     //check if any commands have been sent
     SerialUSB.println("serial input detected");
     handleSerialCommand();
-  }
-}
-
-void handleSerialCommand(){
-  String serialCommand = SerialUSB.readStringUntil('\n'); // read input until newline
-  serialCommand.trim();
-  SerialUSB.print("serial data Received: ");
-  SerialUSB.println(serialCommand);
-  if (serialCommand == "b"){
-      uint8_t message[] = {messageID, 0};
-      messageToSend = true;
-      SerialUSB.println("'buzzer' message locked and loaded");
-      rf95.send(message, sizeof(message));
-      rf95.waitPacketSent();
-      messageID++;
-  } else if (serialCommand == "s"){
-      uint8_t message[] = {messageID, 1};
-      messageToSend = true;
-      SerialUSB.println("'search mode toggle' message locked and loaded");
-      rf95.send(message, sizeof(message));
-      rf95.waitPacketSent();
-      messageID++;
-  } else if (serialCommand == "g"){
-      uint8_t message[] = {messageID, 2};
-      messageToSend = true;
-      SerialUSB.println("'gps request' message locked and loaded");
-      rf95.send(message, sizeof(message));
-      rf95.waitPacketSent();
-      messageID++;
-  } else{
-      SerialUSB.println("command not recognized");
   }
 }
 
