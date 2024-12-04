@@ -68,7 +68,21 @@ void loop()
       timeSinceLastPacket = millis(); //Timestamp this packet
 
       SerialUSB.print("Got message: ");
-      SerialUSB.print((char*)buf);
+      // SerialUSB.print((char*)buf);
+      if (buf[1] == 5){
+        for (int i = 0; i < 18; i++)
+        {
+          SerialUSB.print(buf[i]);
+          SerialUSB.print(" ");
+        }
+      }
+      else {
+        for (uint8_t x:buf){
+          SerialUSB.print(x);
+          SerialUSB.print(" ");
+        }
+      }
+    
       //SerialUSB.print(" RSSI: ");
       //SerialUSB.print(rf95.lastRssi(), DEC);
       SerialUSB.println();
@@ -101,6 +115,7 @@ void loop()
       if (rf95.recv(buf, &len)){
         SerialUSB.print("got reply: ");
         SerialUSB.println((char*)buf);
+        // check if ACK
       } else{
         SerialUSB.println("receiver didn't receive :(");
       }
