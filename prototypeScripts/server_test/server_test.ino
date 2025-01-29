@@ -28,7 +28,7 @@ volatile int messageID = 0;
 void handleSerialCommand(){
   String serialCommand = SerialUSB.readStringUntil('\n'); // read input until newline
   serialCommand.trim();
-  SerialUSB.print("serial data Received: ");
+  SerialUSB.print("Serial Data Received: ");
   SerialUSB.println(serialCommand);
   if (serialCommand == "b"){
       message[0] = messageID;
@@ -45,7 +45,14 @@ void handleSerialCommand(){
       message[1] = 2;
       messageToSend = true;
       SerialUSB.println("'gps request' message locked and loaded");
-  } else{
+  }
+  else if (serialCommand == "l"){ // battery level request
+      message[0] = messageID;
+      message[1] = 3;
+      messageToSend = true;
+      SerialUSB.println("'battery request' message locked and loaded");
+  }
+   else{
       SerialUSB.println("command not recognized");
   }
 }
@@ -124,6 +131,7 @@ void setup()
   SerialUSB.println("Type 's' to toggle search mode.");
   SerialUSB.println("Type 'b' to toggle buzzer.");
   SerialUSB.println("Type 'g' to get GPS data.");
+  SerialUSB.println("Type 'l' to get battery level.");
 }
 
 void loop()
