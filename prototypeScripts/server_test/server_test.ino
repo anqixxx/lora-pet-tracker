@@ -50,6 +50,14 @@ void handleSerialCommand(){
   }
 }
 
+void queryDatabase(){
+  // check for new updates
+}
+
+void updateDatabase(){
+  // push updates
+}
+
 bool sendACK() {
   digitalWrite(LED, HIGH);
   uint8_t toSend[] = {messageID, 4}; 
@@ -126,19 +134,19 @@ void loop()
     uint8_t len = sizeof(buf);
 
     if (rf95.recv(buf, &len)){
-      digitalWrite(LED, HIGH); //Turn on status LED
-      timeSinceLastPacket = millis(); //Timestamp this packet
+      digitalWrite(LED, HIGH); // Turn on status LED
+      timeSinceLastPacket = millis(); // Timestamp this packet
 
       SerialUSB.print("Got message: ");
       // SerialUSB.print((char*)buf);
-      if (buf[1] == 5){
+      if (buf[1] == 5){ // Recieving 1 GPS Reading
         for (int i = 0; i < 18; i++)
         {
           SerialUSB.print(buf[i]);
           SerialUSB.print(" ");
         }
       }
-      else {
+      else { // Control Sequence, TBI
         for (uint8_t x:buf){
           SerialUSB.print(x);
           SerialUSB.print(" ");
@@ -149,7 +157,7 @@ void loop()
       sendACK();
     }
     else
-      SerialUSB.println("Recieve failed");
+      SerialUSB.println("Recieve failed"); // Should we do something here if it doesn't work?
   }
   //Turn off status LED if we haven't received a packet after 1s
   if(millis() - timeSinceLastPacket > 1000){
@@ -171,5 +179,8 @@ void loop()
     SerialUSB.println("serial input detected");
     handleSerialCommand();
   }
+
+  // Check if any commands from database, maybe check for internet connection on our end
+  // Encode that
 }
 
