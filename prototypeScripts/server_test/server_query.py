@@ -25,35 +25,35 @@ def main():
         exit(1)
 
     while True:
-        # while server.in_waiting > 0:
+        while server.in_waiting > 0:
 
-        #     # Read data from base station
-        #     print("Reading from LoRa server...")
-        #     # message = server.readline().decode('utf-8').strip()
-        #     message = server.read(server.in_waiting).decode('utf-8').strip()
-        #     print(f"Received from LoRa server: {message}")
+            # Read data from base station
+            print("Reading from LoRa server...")
+            # message = server.readline().decode('utf-8').strip()
+            message = server.read(server.in_waiting).decode('utf-8').strip()
+            print(f"Received from LoRa server: {message}\n")
 
-        #     # Parse later, for now test
-        #     data = {"test_message": message}
+            # Parse later, for now test
+            data = {"test_message": message}
 
-        #     response = requests.post(
-        #         f"{SUPABASE_URL}/rest/v1/device_status",
-        #         headers={
-        #             "Content-Type": "application/json",
-        #             "apikey": SUPABASE_KEY,  # Add the API key here
-        #         },
-        #         json=data
-        #     )
+            # response = requests.post(
+            #     f"{SUPABASE_URL}/rest/v1/device_status",
+            #     headers={
+            #         "Content-Type": "application/json",
+            #         "apikey": SUPABASE_KEY,  # Add the API key here
+            #     },
+            #     json=data
+            # )
 
-        #     if response.text.strip():  # Ensure there is content to parse
-        #         try:
-        #             data = response.json()
-        #             print("Parsed JSON Data:", data)
-        #         except requests.exceptions.JSONDecodeError as e:
-        #             print("Error parsing JSON:", e)
-        #     else:
-        #         print("Empty response body.")
-        #     print("\n")
+            # if response.text.strip():  # Ensure there is content to parse
+            #     try:
+            #         data = response.json()
+            #         print("Parsed JSON Data:", data)
+            #     except requests.exceptions.JSONDecodeError as e:
+            #         print("Error parsing JSON:", e)
+            # else:
+            #     print("Empty response body.")
+            # print("\n")
 
         # Read data from Supabase, sort by deceasing order of timestamp and only look at unprocessed commands
         commands = requests.get(
@@ -61,38 +61,38 @@ def main():
             headers={"Content-Type": "application/json"}
         )
         
-        print("Supabase Command Response:", commands.status_code, commands.json())
-        print("\n")
+        print(f"Supabase Status: {commands.status_code} \nSupabase Command: {commands.json()} \n")
 
         if commands.status_code == 200 and commands.json():
             commands = commands.json()
 
             for command in commands:
+                command_id = command['id']
+
                 # Parse command, allow buzzer, update_batter, mode
                 if command['buzzer']: send_command('b')
                 if command['battery_req']: send_command("l")
                 if command['gps_req']: send_command("g")
                 if command['mode']:
-                    print(f"Sending {command} mode to LoRa server: \n") 
+                    print(f"Sending {command['mode']} mode to LoRa server.") 
                     send_command("s") # Need to figure out a way to save state of mode
 
                 # After sending, mark this command as processed in Supabase
-                # turned off for now to test
-                # update_response = requests.patch(
-                #     f"{SUPABASE_URL}/rest/v1/device_commands?id=eq.{command_id}",
-                #     headers=headers,
-                #     json={"processed": True}
-                # )
-                
-                # if update_response.status_code == 200:
-                #     print(f"Command {command_id} marked as processed.")
-                # else:
-                #     print(f"Failed to update command {command_id} status.")
+                update = requests.patch(
+                    f"{SUPABASE_URL}/rest/v1/device_commands?id=eq.{command_id}&apikey={SUPABASE_KEY}",
+                    headers={"Content-Type": "application/json"},
+                    json={"status": True}
+                )
+
+                if update.status_code // 100 == 2:  # Check if status code is in the 2xx range
+                    print(f"Command {command_id} marked as processed.\n")
+                else:
+                    print(f"Failed to update command {command_id} status with code {update.status_code}.\n")
         else:
-            print("No new unprocessed commands.")
+            print("No new unprocessed commands. \n")
 
         # Wait before checking for new commands
-        time.sleep(2) # slowly now for testing
+        time.sleep(2) # Slowly now for testing
 
 if __name__ == "__main__":
     main()

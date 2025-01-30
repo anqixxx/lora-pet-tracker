@@ -56,7 +56,12 @@ void pollIMU(int dataIMU[3][3]) {
   dataIMU[1][1] = accel.acceleration.y;
   dataIMU[1][2] = accel.acceleration.z;
 }
-
+// message datatype
+// uint8_t message{
+//   uint8_t messageID;
+//   uint8_t messageType;}
+// arr[0]
+// message.type()
 void getGPS(uint8_t dataGPS[]) {
   // wake up gps
   digitalWrite(GPS_SLEEP_PIN, HIGH);

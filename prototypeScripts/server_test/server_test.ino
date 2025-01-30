@@ -57,14 +57,6 @@ void handleSerialCommand(){
   }
 }
 
-void queryDatabase(){
-  // check for new updates
-}
-
-void updateDatabase(){
-  // push updates
-}
-
 bool sendACK() {
   digitalWrite(LED, HIGH);
   uint8_t toSend[] = {messageID, 4}; 
