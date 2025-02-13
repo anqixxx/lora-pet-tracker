@@ -4,15 +4,23 @@ import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:async';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_database/firebase_database.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// Setup
+final Color defaultColor = Color.fromARGB(255, 229, 156, 150);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  print('Flutter Initialized');
+
+  await Supabase.initialize(
+    url: 'https://mgrgaxqqtvqttxvulbnk.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ncmdheHFxdHZxdHR4dnVsYm5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc0MDUyMDgsImV4cCI6MjA1Mjk4MTIwOH0.A3VybPyJGZ3Bm2rfe1BMZLM_51eVKFmW0uEGSi6qZhI',
+  );
+  
   runApp(MyApp());
-  print("Firebase Initialized");
+  print("Supabase Initialized");
 }
 
 class MyApp extends StatelessWidget {
@@ -24,10 +32,19 @@ class MyApp extends StatelessWidget {
       create: (context) => MyAppState(),
       child: MaterialApp(
         title: 'Find Your Cat',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 229, 156, 150)),
+
+      theme: ThemeData(
+        useMaterial3: true,
+        primaryColor: defaultColor,
+        colorScheme: ColorScheme.fromSeed(seedColor: defaultColor),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.pink, // Use defaultColor for the background
+            foregroundColor: Colors.white, // Text color
+          ),
         ),
+      ),
+
         home: MyHomePage(),
       ),
     );
@@ -35,41 +52,41 @@ class MyApp extends StatelessWidget {
 }
 
 class MyAppState extends ChangeNotifier {
-  final CollectionReference _gpsDataRef = FirebaseFirestore.instance.collection('gps_data');
+  final SupabaseClient supabase = Supabase.instance.client;
 
-  StreamSubscription<QuerySnapshot>? _gpsDataSubscription;
+  StreamSubscription? _gpsDataSubscription;
   List<Map<String, dynamic>> gpsDataList = [];
   List<Map<String, dynamic>> commands = [];
+  // Tuple of batteryLevel
 
   MyAppState() {
     _startListeningForData();
   }
 
   void _startListeningForData() {
-    print("Listening for GPS data... NEW");
-    _gpsDataSubscription = _gpsDataRef.snapshots().listen((querySnapshot) {
-      gpsDataList = querySnapshot.docs
-          .map((doc) => {
-            'lat': doc['lat'],
-            'long': doc['long'],
-            'time': doc['time']
-          })
+    _gpsDataSubscription = supabase
+        .from('device_status') //datbase name
+        .stream(primaryKey: ['id'])
+        .listen((data) { // filter
+      gpsDataList = data
+          .map((entry) => {
+                'lat': entry['gps_latitude'],
+                'long': entry['gps_longitude'],
+                'time': entry['timestamp']
+              })
           .toList();
-      print("waiting");
-      gpsDataList.forEach((data) {
-        print("New GPS Data: Latitude = ${data['lat']}, Longitude = ${data['long']}");
-      });
-
       notifyListeners();
     });
   }
 
   Map<String, dynamic>? get latestGpsData {
       if (gpsDataList.isNotEmpty) {
+        print("Latest GPS Data: Latitude = ${gpsDataList.last['lat']}, Longitude = ${gpsDataList.last['long']}, Time = ${gpsDataList.last['time']}");
         return gpsDataList.last;
       }
       return null;
     }
+  
 
   @override
   void dispose() {
@@ -92,10 +109,8 @@ class _MyHomePageState extends State<MyHomePage> {
     switch (selectedIndex) {
       case 0:
         page = MainPage();
-        break;
       case 1:
         page = HistoryPage();
-        break;
       default:
         throw UnimplementedError('no widget for $selectedIndex');
     }
@@ -150,10 +165,10 @@ class _MainPageState extends State<MainPage> {
   int _start = 0; // Variable to keep track of the countdown
   bool _isRunning = false; // Variable to check if countdown is running
   Timer? _timer; // Timer for countdown
+  // Add a mode state
 
-  // Firestore reference (you can change the collection and document paths as needed)
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+  final supabase = Supabase.instance.client;
+
   void startCountdown() {
     setState(() {
       _start = 30; // Set countdown to 30 seconds
@@ -172,31 +187,67 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  // Function to send a command to Firestore
+  // Function to send a buzzer on
   void startSpeaker() async {
     try {
-      await _firestore.collection('commands').add({
-        'timestamp': FieldValue.serverTimestamp(),
-        'command': 'start_speaker',
+
+      final response = await supabase.from('device_commands').insert({
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+        'buzzer': true,
+        'status': false,
       });
-      print("Speaker command sent to Firestore");
+
+      if (response.error == null){
+        print("Speaker command sent to Supabase");
+      } else{
+        print("Error sending command to Supabase: ${response.error.message}");
+      }
+
     } catch (e) {
-      print("Error sending speaker command to Firestore: $e");
+      print("Unexpected error sending speaker command: $e");
     }
   }
 
-  void stopSpeaker() {
+
+
+  void stopSpeaker() async{
     _timer?.cancel();
     setState(() {
       _isRunning = false;
       _start = 0; // Reset countdown
     });
 
-    // Send 'stop_speaker' command to Firestore
-    FirebaseFirestore.instance.collection('commands').add({
-      'timestamp': FieldValue.serverTimestamp(),
-      'command': 'stop_speaker',
-    });
+    try {
+      final response = await supabase.from('device_commands').insert({
+        'timestamp': DateTime.now().toUtc().toIso8601String(), 
+        'buzzer': false,
+        'status': false,
+        'device_id': 0,
+      });
+      print(response.error);
+    } catch (e) {
+      print("Unexpected error sending stop speaker command: $e");
+    }
+  }
+
+  void selectMode(normalmode) async {
+    if (normalmode){
+      print('sleep_mode');
+    }
+    try {
+      final response = await supabase.from('device_commands').insert({
+        'timestamp': DateTime.now().toUtc().toIso8601String(), 
+      });
+
+      if (response.error == null){
+        print("Mode command sent to Supabase");
+      } else{
+        print("Error sending command to Supabase: ${response.error.message}");
+      }
+
+    } catch (e) {
+      print("Unexpected error sending mode command: $e");
+    }
   }
 
   @override
@@ -232,25 +283,10 @@ class _MainPageState extends State<MainPage> {
               ),
             ),
             SizedBox(height: 20),
+
             // Mode Selection Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    // Normal Mode functionality here
-                  },
-                  child: Text("Normal Mode"),
-                ),
-                SizedBox(width: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    // Search Mode functionality here
-                  },
-                  child: Text("Search Mode"),
-                ),
-              ],
-            ),
+            ModeSelectionWidget(), // Replace the Row with the ModeSelectionWidget
+
             SizedBox(height: 20),
             // Battery and Last Updated Section
             Row(
@@ -309,7 +345,7 @@ class _MainPageState extends State<MainPage> {
                   SizedBox(width: 10),
                   
                   // Square Stop button
-                  Container(
+                  SizedBox(
                     width: 50, // Set width for the square
                     height: 50, // Set height for the square
                     child: IconButton(
@@ -382,6 +418,61 @@ class BatteryIndicator extends StatelessWidget {
   }
 }
 
+class ModeSelectionWidget extends StatefulWidget {
+  @override
+  _ModeSelectionWidgetState createState() => _ModeSelectionWidgetState();
+}
+
+class _ModeSelectionWidgetState extends State<ModeSelectionWidget> {
+  bool normalmode = true; // Default to Normal Mode
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ElevatedButton(
+          onPressed: normalmode
+              ? null // Disable button when Normal Mode is selected (normalmode is true)
+              : () {
+                  setState(() {
+                    normalmode = true; // Switch to Normal Mode
+                  });
+                  print("Normal Mode on");
+                print("normalmode is: $normalmode");
+
+                  // Normal Mode functionality here
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: normalmode ? null: Colors.grey[300], // Set color
+            foregroundColor: normalmode ? null: Colors.grey[500], // Set color
+            
+          ),
+          child: Text("Normal Mode"),
+        ),
+        SizedBox(width: 20),
+        ElevatedButton(
+          onPressed: !normalmode
+              ? null // Disable button when Search Mode is selected (normalmode is false)
+              : () {
+                  setState(() {
+                    normalmode = false; // Switch to Search Mode
+                  });
+                  print('Search mode on');
+                  // Search Mode functionality here
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: !normalmode ?  null : Colors.grey[300], // Set color
+            foregroundColor: !normalmode ?  null : Colors.grey[500], // Set color
+          ),
+          child: Text("Search Mode"),
+        ),
+      ],
+    );
+  }
+
+}
+
 
 
 Widget historyMap() {
@@ -401,7 +492,7 @@ Widget historyMap() {
 
         return Consumer<MyAppState>(
           builder: (context, appState, child) {
-            final gpsDataList = appState.gpsDataList; // Get firebase GPS data
+            final gpsDataList = appState.gpsDataList; // Get GPS data
 
             List<Marker> markers = [
               // Add a marker for the current location, making it red
@@ -412,7 +503,7 @@ Widget historyMap() {
                 alignment: Alignment.center,
                 child: Icon(Icons.location_on, color: Colors.red, size: 40),
               ),
-              // Add markers for each GPS data point from Firebase, making them black
+              // Add markers for each GPS data point, making them black
               if (gpsDataList.isNotEmpty) 
                 ...gpsDataList.map((data) {
                   final latitude = data['lat'] as double;
@@ -466,7 +557,7 @@ Widget map() {
 
         return Consumer<MyAppState>(
           builder: (context, appState, child) {
-            final latestPosition = appState.latestGpsData; // Get firebase GPS data
+            final latestPosition = appState.latestGpsData; 
 
             // Initialize the list of markers with the current location marker.
             List<Marker> markers = [
