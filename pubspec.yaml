@@ -20,7 +20,7 @@ dependencies:
   firebase_database: ^11.1.5
   cloud_firestore: ^5.4.5
   supabase_flutter: ^2.8.3
-
+  intl: ^0.18.0
 
 dev_dependencies:
   flutter_test:

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -37,14 +38,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         primaryColor: defaultColor,
         colorScheme: ColorScheme.fromSeed(seedColor: defaultColor),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.pink, // Use defaultColor for the background
-            foregroundColor: Colors.white, // Text color
-          ),
-        ),
       ),
-
         home: MyHomePage(),
       ),
     );
@@ -54,27 +48,46 @@ class MyApp extends StatelessWidget {
 class MyAppState extends ChangeNotifier {
   final SupabaseClient supabase = Supabase.instance.client;
 
-  StreamSubscription? _gpsDataSubscription;
+  StreamSubscription? _nodeDataSubscription;
   List<Map<String, dynamic>> gpsDataList = [];
+  List<Map<String, dynamic>> batteryLevelList = [];
   List<Map<String, dynamic>> commands = [];
   // Tuple of batteryLevel
 
   MyAppState() {
+    print("MyAppState initialized!");  // Debugging
     _startListeningForData();
   }
 
   void _startListeningForData() {
-    _gpsDataSubscription = supabase
-        .from('device_status') //datbase name
+    _nodeDataSubscription = supabase
+        .from('device_status')
         .stream(primaryKey: ['id'])
-        .listen((data) { // filter
+        .listen((data) {
+      print("Listening to Supabase stream...");
+
+      // Filter out entries where any GPS value is null
       gpsDataList = data
+          .where((entry) =>
+              entry['gps_latitude'] != null &&
+              entry['gps_longitude'] != null &&
+              entry['timestamp'] != null)
           .map((entry) => {
                 'lat': entry['gps_latitude'],
                 'long': entry['gps_longitude'],
                 'time': entry['timestamp']
               })
           .toList();
+      // Filter out entries where battery_level or timestamp is null
+      batteryLevelList = data
+          .where((entry) => entry['battery_level'] != null && entry['timestamp'] != null)
+          .map((entry) => {
+                'battery': entry['battery_level'],
+                'time': entry['timestamp']
+              })
+          .toList();
+      print("Updated battery level list: $batteryLevelList");  // Debugging line
+
       notifyListeners();
     });
   }
@@ -86,11 +99,18 @@ class MyAppState extends ChangeNotifier {
       }
       return null;
     }
-  
+
+  Map<String, dynamic>? get latestBatteryLevel {
+    if (batteryLevelList.isNotEmpty) {
+      print("Last Updated Battery Level = ${batteryLevelList.last['battery']}, Time = ${batteryLevelList.last['time']}");
+      return batteryLevelList.last;
+    }
+    return null;
+  }
 
   @override
   void dispose() {
-    _gpsDataSubscription?.cancel();
+    _nodeDataSubscription?.cancel();
     super.dispose();
   }
 }
@@ -165,6 +185,7 @@ class _MainPageState extends State<MainPage> {
   int _start = 0; // Variable to keep track of the countdown
   bool _isRunning = false; // Variable to check if countdown is running
   Timer? _timer; // Timer for countdown
+  bool normalmode = true; 
   // Add a mode state
 
   final supabase = Supabase.instance.client;
@@ -195,6 +216,7 @@ class _MainPageState extends State<MainPage> {
         'timestamp': DateTime.now().toUtc().toIso8601String(),
         'buzzer': true,
         'status': false,
+        'device_id': 0,
       });
 
       if (response.error == null){
@@ -207,8 +229,6 @@ class _MainPageState extends State<MainPage> {
       print("Unexpected error sending speaker command: $e");
     }
   }
-
-
 
   void stopSpeaker() async{
     _timer?.cancel();
@@ -230,7 +250,7 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
-  void selectMode(normalmode) async {
+  void selectMode() async {
     if (normalmode){
       print('sleep_mode');
     }
@@ -289,18 +309,9 @@ class _MainPageState extends State<MainPage> {
 
             SizedBox(height: 20),
             // Battery and Last Updated Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                BatteryIndicator(batteryLevel: 0.05), // Replace with actual battery level variable
-                Column(
-                  children: [
-                    Text("Last Checked"),
-                    Text("10:19"), // Replace with dynamic timestamp
-                  ],
-                ),
-              ],
-            ),
+            
+            battery(),
+
             SizedBox(height: 20),
             // Speaker and Timer Section
             Row(
@@ -444,9 +455,10 @@ class _ModeSelectionWidgetState extends State<ModeSelectionWidget> {
                   // Normal Mode functionality here
                 },
           style: ElevatedButton.styleFrom(
-            backgroundColor: normalmode ? null: Colors.grey[300], // Set color
-            foregroundColor: normalmode ? null: Colors.grey[500], // Set color
-            
+            // backgroundColor: normalmode ? null: Colors.grey[300], // Set color
+            // foregroundColor: normalmode ? null: Colors.grey[500], // Set color
+            backgroundColor: normalmode ? null: null, // Set color
+            foregroundColor: normalmode ? null: null, // Set color            
           ),
           child: Text("Normal Mode"),
         ),
@@ -460,10 +472,13 @@ class _ModeSelectionWidgetState extends State<ModeSelectionWidget> {
                   });
                   print('Search mode on');
                   // Search Mode functionality here
+                  
                 },
           style: ElevatedButton.styleFrom(
-            backgroundColor: !normalmode ?  null : Colors.grey[300], // Set color
-            foregroundColor: !normalmode ?  null : Colors.grey[500], // Set color
+            // backgroundColor: !normalmode ?  null : Colors.grey[300], // Set color
+            // foregroundColor: !normalmode ?  null : Colors.grey[500], // Set color
+            backgroundColor: !normalmode ?  null : null, // Set color
+            foregroundColor: !normalmode ?  null : null, // Set color
           ),
           child: Text("Search Mode"),
         ),
@@ -473,57 +488,44 @@ class _ModeSelectionWidgetState extends State<ModeSelectionWidget> {
 
 }
 
-
+Stream<Position> _getLocationStream() {
+  return Geolocator.getPositionStream(
+    locationSettings: LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 10,
+    ),
+  );
+}
 
 Widget historyMap() {
-  return FutureBuilder<Position>(
-    future: _getCurrentLocation(),
+  return StreamBuilder<Position>(
+    stream: _getLocationStream(), // Stream to get real-time location updates
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
-        // Show a loading indicator while waiting for the location.
-        return Center(child: CircularProgressIndicator());
+        return Center(child: CircularProgressIndicator()); // Loading indicator
       } else if (snapshot.hasError) {
-        // Show an error message if location cannot be accessed.
-        return Center(child: Text('Error: ${snapshot.error}'));
+        return Center(child: Text('Error: ${snapshot.error}')); // Error handling
+      } else if (!snapshot.hasData || snapshot.data == null) {
+        return Center(child: Text('Location data is unavailable'));
       } else {
-        // Use the current location for the initial center of the map.
-        final position = snapshot.data;
-        final initialCenter = LatLng(position!.latitude, position.longitude);
+        final position = snapshot.data!;
+        final initialCenter = LatLng(position.latitude, position.longitude);
 
         return Consumer<MyAppState>(
           builder: (context, appState, child) {
-            final gpsDataList = appState.gpsDataList; // Get GPS data
-
-            List<Marker> markers = [
-              // Add a marker for the current location, making it red
-              Marker(
-                width: 80.0,
-                height: 80.0,
-                point: initialCenter,
-                alignment: Alignment.center,
-                child: Icon(Icons.location_on, color: Colors.red, size: 40),
-              ),
-              // Add markers for each GPS data point, making them black
-              if (gpsDataList.isNotEmpty) 
-                ...gpsDataList.map((data) {
-                  final latitude = data['lat'] as double;
-                  final longitude = data['long'] as double;
-                  final point = LatLng(latitude, longitude);
-
-                  return Marker(
-                    width: 80.0,
-                    height: 80.0,
-                    point: point,
-                    alignment: Alignment.center,
-                    child: Icon(Icons.location_on, color: Colors.black, size: 40),
-                  );
-                }).toList(),  // Convert map result to List<Marker>
-            ];
+              final gpsDataList = appState.gpsDataList;
+              // Filter out any GPS data that has null values for latitude or longitude
+              final validGpsDataList = gpsDataList.where((data) {
+              final latitude = data['lat'] as double?;
+              final longitude = data['long'] as double?;
+              return latitude != null && longitude != null;
+            }).toList();
+            final markers = _buildMarkers(initialCenter, validGpsDataList);
 
             return FlutterMap(
               options: MapOptions(
                 initialCenter: initialCenter,
-                initialZoom: 13, // Set your preferred initial zoom level.
+                initialZoom: 13, // Set your preferred initial zoom level
                 interactionOptions: const InteractionOptions(flags: ~InteractiveFlag.doubleTapZoom),
               ),
               children: [
@@ -538,6 +540,38 @@ Widget historyMap() {
       }
     },
   );
+}
+
+List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsDataList) {
+  List<Marker> markers = [
+    // Marker for the current location (red)
+    Marker(
+      width: 80.0,
+      height: 80.0,
+      point: initialCenter,
+      alignment: Alignment.center,
+      child: Icon(Icons.location_on, color: Colors.red, size: 40),
+    ),
+  ];
+
+  // Add markers for each valid GPS data point (black)
+  if (gpsDataList.isNotEmpty) {
+    markers.addAll(gpsDataList.map((data) {
+      final latitude = data['lat'] as double;
+      final longitude = data['long'] as double;
+      final point = LatLng(latitude, longitude);
+
+      return Marker(
+        width: 80.0,
+        height: 80.0,
+        point: point,
+        alignment: Alignment.center,
+        child: Icon(Icons.location_on, color: Colors.black, size: 40),
+      );
+    }).toList());
+  }
+
+  return markers;
 }
 
 Widget map() {
@@ -607,6 +641,35 @@ Widget map() {
   );
 }
 
+Widget battery() {
+  return Consumer<MyAppState>(
+    builder: (context, appState, child) {
+      final latestPercentage = appState.latestBatteryLevel;
+
+      if (latestPercentage != null && latestPercentage.isNotEmpty) {
+        final batteryPercent = latestPercentage['battery'];
+        final time = latestPercentage['time'];
+        DateTime formattedTime = DateTime.parse(time);
+        String formattedDate = DateFormat('hh:mm a MMM dd').format(formattedTime);
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            BatteryIndicator(batteryLevel: batteryPercent / 100), // Replace with actual battery level variable
+            Column(
+              children: [
+                Text("Last Checked"),
+                Text(formattedDate), 
+              ],
+            ),
+          ],
+        );
+      } else {
+        return Text("No battery data available");
+      }
+    },
+  );
+}
 
 TileLayer get openStreetMapTileLayer => TileLayer(
   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
