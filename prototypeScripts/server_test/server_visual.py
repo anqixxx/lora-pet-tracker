@@ -79,8 +79,12 @@ def dashboard():
     
     print(f'mode updated: {mode}')
 
-    node_data = supabase.from_('device_status').select('*').execute().data  
-    app_data = supabase.from_('device_commands').select('*').execute().data  
+    if user_id:
+        node_data = supabase.from_('device_status').select('*').eq("device_id", user_id).execute().data  
+        app_data = supabase.from_('device_commands').select('*').eq("device_id", user_id).execute().data  
+    else:
+        node_data = supabase.from_('device_status').select('*').execute().data  
+        app_data = supabase.from_('device_commands').select('*').execute().data  
 
     node_data = filter_node(node_data)
     app_data = filter_app(app_data)
