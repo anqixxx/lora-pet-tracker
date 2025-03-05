@@ -67,7 +67,6 @@ def filter(node_data, app_data):
             if pair[0] == 'buzzer':
                 if pair[1]:
                     command += str('Request Buzzer On')
-                    print(pair[1])
                 else:
                     command += str('Request Buzzer Off')
             elif pair[0] == 'mode':
