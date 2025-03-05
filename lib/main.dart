@@ -108,6 +108,10 @@ class MyAppState extends ChangeNotifier {
     return null;
   }
 
+  void requestBattery() {
+    print("Requesting Battery Update");
+  }
+
   @override
   void dispose() {
     _nodeDataSubscription?.cancel();
@@ -178,10 +182,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
 class MainPage extends StatefulWidget {
   @override
-  _MainPageState createState() => _MainPageState();
+  MainPageState createState() => MainPageState();
 }
 
-class _MainPageState extends State<MainPage> {
+class MainPageState extends State<MainPage> {
   int _start = 0; // Variable to keep track of the countdown
   bool _isRunning = false; // Variable to check if countdown is running
   Timer? _timer; // Timer for countdown
@@ -211,7 +215,6 @@ class _MainPageState extends State<MainPage> {
   // Function to send a buzzer on
   void startSpeaker() async {
     try {
-
       final response = await supabase.from('device_commands').insert({
         'timestamp': DateTime.now().toUtc().toIso8601String(),
         'buzzer': true,
@@ -250,6 +253,7 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
+  // Function to select mode
   void selectMode() async {
     if (normalmode){
       print('sleep_mode');
@@ -270,6 +274,28 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
+  void requestBattery() async {
+    print("Requesting Battery Update");
+    
+    try {
+      final response = await supabase.from('device_commands').insert({
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+          'battery_req': true,
+          'status': false,
+          'device_id': 0,
+        });
+
+      if (response.error == null){
+        print("Battery request command sent to Supabase");
+      } else{
+        print("Error sending battery request to Supabase: ${response.error.message}");
+      }
+
+    } catch (e) {
+      print("Unexpected error sending battery request: $e");
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel(); // Cancel timer on dispose
@@ -280,7 +306,14 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Lora App"),
+        title: Text(
+          "find my cat",
+          style: TextStyle(
+            fontFamily: 'YourCustomFont', // Replace with the actual font family name
+            fontSize: 15, // Adjust the size as needed
+            fontWeight: FontWeight.bold, // Optional
+          ),
+        ),
         centerTitle: true,
       ),
       body: Padding(
@@ -305,14 +338,15 @@ class _MainPageState extends State<MainPage> {
             SizedBox(height: 20),
 
             // Mode Selection Buttons
-            ModeSelectionWidget(), // Replace the Row with the ModeSelectionWidget
+            ModeSelectionWidget(),
 
             SizedBox(height: 20),
-            // Battery and Last Updated Section
-            
+
+            // Battery Selection            
             battery(),
 
             SizedBox(height: 20),
+            
             // Speaker and Timer Section
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -431,10 +465,10 @@ class BatteryIndicator extends StatelessWidget {
 
 class ModeSelectionWidget extends StatefulWidget {
   @override
-  _ModeSelectionWidgetState createState() => _ModeSelectionWidgetState();
+  ModeSelectionWidgetState createState() => ModeSelectionWidgetState();
 }
 
-class _ModeSelectionWidgetState extends State<ModeSelectionWidget> {
+class ModeSelectionWidgetState extends State<ModeSelectionWidget> {
   bool normalmode = true; // Default to Normal Mode
 
   @override
@@ -562,11 +596,11 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
       final point = LatLng(latitude, longitude);
 
       return Marker(
-        width: 80.0,
-        height: 80.0,
+        width: 50.0,
+        height: 50.0,
         point: point,
         alignment: Alignment.center,
-        child: Icon(Icons.location_on, color: Colors.black, size: 40),
+        child: Icon(Icons.location_on, color: Colors.black, size: 20),
       );
     }).toList());
   }
@@ -662,7 +696,14 @@ Widget battery() {
                 Text(formattedDate), 
               ],
             ),
+            IconButton(
+                  icon: Icon(Icons.refresh),
+                  onPressed: () {
+                    appState.requestBattery();
+                  },
+            )
           ],
+          
         );
       } else {
         return Text("No battery data available");
