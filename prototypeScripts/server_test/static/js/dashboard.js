@@ -52,7 +52,7 @@ function updateCurrentUserDisplay(mode) {
     } 
     else if (mode){
         display.innerHTML = 'Invalid mode selected - showing all data';
-        mode = None;
+        mode = null;
     }
     else {
         display.innerHTML = 'No mode selected - showing all data';
@@ -68,8 +68,6 @@ function formatDateTime(timestamp) {
     return date.toLocaleString('en-US', options);
 }
 
-// Auto-refresh every 5 seconds
-setInterval(fetchData, 5000);
+setInterval(fetchData, 500);
 
-// Initial load
 fetchData();
