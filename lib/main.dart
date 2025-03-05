@@ -109,8 +109,22 @@ class MyAppState extends ChangeNotifier {
     return null;
   }
 
-  void requestBattery() {
+  void requestBattery() async {
     print("Requesting Battery Update");
+
+    try {
+      print('Before Supabase insert');
+      final response = await supabase.from('device_commands').insert({
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+          'battery': true,
+          'status': false,
+          'device_id': deviceId,      
+        });
+      print('After Supabase insert');
+      print(response.error);
+    } catch (e) {
+      print("Unexpected error sending battery request: $e");
+    }
   }
 
   @override
@@ -127,6 +141,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   var selectedIndex = 0;
+  bool showNavRail = false; 
 
   @override
   Widget build(BuildContext context) {
@@ -145,28 +160,29 @@ class _MyHomePageState extends State<MyHomePage> {
         return Scaffold(
           body: Row(
             children: [
-              SafeArea(
-                child: NavigationRail(
-                  extended: constraints.maxWidth >= 600,
-                  destinations: [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.home),
-                      label: Text('Home'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.history),
-                      label: Text('History'),
-                    ),
-                  ],
-                  selectedIndex: selectedIndex,
-                  onDestinationSelected: (value) {
-                    print('Selected: $value');
-                    setState(() {
-                      selectedIndex = value;
-                    });
-                  },
+              if (showNavRail)
+                SafeArea(
+                  child: NavigationRail(
+                    extended: constraints.maxWidth >= 600,
+                    destinations: [
+                      NavigationRailDestination(
+                        icon: Icon(Icons.home),
+                        label: Text('Home'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.history),
+                        label: Text('History'),
+                      ),
+                    ],
+                    selectedIndex: selectedIndex,
+                    onDestinationSelected: (value) {
+                      print('Selected: $value');
+                      setState(() {
+                        selectedIndex = value;
+                      });
+                    },
+                  ),
                 ),
-              ),
               Expanded(
                 child: Container(
                   color: Theme.of(context).colorScheme.primaryContainer,
@@ -174,6 +190,15 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
             ],
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              setState(() {
+                showNavRail = !showNavRail;
+              });
+            },
+            child: Icon(showNavRail ? Icons.menu_open : Icons.menu),
+            tooltip: showNavRail ? 'Hide navigation' : 'Show navigation',
           ),
         );
       },
@@ -262,6 +287,7 @@ class MainPageState extends State<MainPage> {
     try {
       final response = await supabase.from('device_commands').insert({
         'timestamp': DateTime.now().toUtc().toIso8601String(), 
+        'mode': 'n',
       });
 
       if (response.error == null){
@@ -272,28 +298,6 @@ class MainPageState extends State<MainPage> {
 
     } catch (e) {
       print("Unexpected error sending mode command: $e");
-    }
-  }
-
-  void requestBattery() async {
-    print("Requesting Battery Update");
-    
-    try {
-      final response = await supabase.from('device_commands').insert({
-          'timestamp': DateTime.now().toUtc().toIso8601String(),
-          'battery': true,
-          'status': false,
-          'device_id': deviceId,
-        });
-
-      if (response.error == null){
-        print("Battery request command sent to Supabase");
-      } else{
-        print("Error sending battery request to Supabase: ${response.error.message}");
-      }
-
-    } catch (e) {
-      print("Unexpected error sending battery request: $e");
     }
   }
 
@@ -308,7 +312,7 @@ class MainPageState extends State<MainPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "find my cat",
+          "🐈 🐈 🐈",
           style: TextStyle(
             fontFamily: 'YourCustomFont', // Replace with the actual font family name
             fontSize: 15, // Adjust the size as needed
