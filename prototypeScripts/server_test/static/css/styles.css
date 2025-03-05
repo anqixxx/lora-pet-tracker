@@ -1,0 +1,60 @@
+/* Make tables support sticky columns */
+table {
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+    table-layout: fixed;
+    border-collapse: separate; /* Changed from collapse to support sticky columns */
+    border-spacing: 0;
+    position: relative;
+}
+
+/* Make first column sticky/locked */
+table th:first-child,
+table td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: white; /* Background color to hide content behind */
+    z-index: 2;
+    width: 200px; /* Fixed width for timestamp columns */
+    min-width: 200px;
+    box-shadow: 2px 0 5px -2px rgba(0,0,0,0.2); /* Add shadow for visual separation */
+    border-right: 1px solid #ddd; /* Add border */
+}
+
+
+table th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background-color: #f2f2f2;
+}
+
+table th:first-child {
+    z-index: 4;
+}
+
+th, td {
+    padding: 8px 10px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    border: 1px solid #ddd;
+}
+
+td {
+    max-width: 150px; /* Limit width for non-timestamp cells */
+}
+
+td:hover {
+    white-space: normal;
+    word-wrap: break-word;
+    background-color: #f8f8f8;
+    overflow: visible;
+    z-index: 5;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    min-width: 200px;
+}
