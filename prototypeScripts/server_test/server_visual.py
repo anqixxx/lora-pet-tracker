@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from supabase import create_client
+from dateutil import parser
 from pytz import timezone
 from datetime import datetime
 from typing import List, Dict
@@ -104,7 +105,7 @@ def status(stat):
         return 'Sent'
 
 def format_datetime(value, target_tz='America/Los_Angeles'):
-    dt = datetime.fromisoformat(value)
+    dt = parser.parse(value)
     dt = dt.astimezone(timezone(target_tz))
     return dt.strftime(f"%b %d, %Y - %I:%M:%S %p")
 
