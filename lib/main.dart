@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Setup
 final Color defaultColor = Color.fromARGB(255, 229, 156, 150);
+final int deviceId = 0; // 0 for actual, 1 for test, 2 for experimental
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -219,7 +220,7 @@ class MainPageState extends State<MainPage> {
         'timestamp': DateTime.now().toUtc().toIso8601String(),
         'buzzer': true,
         'status': false,
-        'device_id': 0,
+        'device_id': deviceId,
       });
 
       if (response.error == null){
@@ -245,7 +246,7 @@ class MainPageState extends State<MainPage> {
         'timestamp': DateTime.now().toUtc().toIso8601String(), 
         'buzzer': false,
         'status': false,
-        'device_id': 0,
+        'device_id': deviceId,
       });
       print(response.error);
     } catch (e) {
@@ -280,9 +281,9 @@ class MainPageState extends State<MainPage> {
     try {
       final response = await supabase.from('device_commands').insert({
           'timestamp': DateTime.now().toUtc().toIso8601String(),
-          'battery_req': true,
+          'battery': true,
           'status': false,
-          'device_id': 0,
+          'device_id': deviceId,
         });
 
       if (response.error == null){
