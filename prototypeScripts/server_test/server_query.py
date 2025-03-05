@@ -26,34 +26,36 @@ def main():
 
     while True:
         while server.in_waiting > 0:
-
             # Read data from base station
             print("Reading from LoRa server...")
-            # message = server.readline().decode('utf-8').strip()
-            message = server.read(server.in_waiting).decode('utf-8').strip()
+            message = server.readline().decode('utf-8').strip()
+            # message = server.read(server.in_waiting).decode('utf-8').strip()
             print(f"Received from LoRa server: {message}\n")
 
             # Parse later, for now test
-            data = {"test_message": message}
+            if ("Got message" in message):
+                data = {"test_message": message}
 
-            # response = requests.post(
-            #     f"{SUPABASE_URL}/rest/v1/device_status",
-            #     headers={
-            #         "Content-Type": "application/json",
-            #         "apikey": SUPABASE_KEY,  # Add the API key here
-            #     },
-            #     json=data
-            # )
+                print(f"Sending to Supabase\n")
 
-            # if response.text.strip():  # Ensure there is content to parse
-            #     try:
-            #         data = response.json()
-            #         print("Parsed JSON Data:", data)
-            #     except requests.exceptions.JSONDecodeError as e:
-            #         print("Error parsing JSON:", e)
-            # else:
-            #     print("Empty response body.")
-            # print("\n")
+                response = requests.post(
+                    f"{SUPABASE_URL}/rest/v1/device_status",
+                    headers={
+                        "Content-Type": "application/json",
+                        "apikey": SUPABASE_KEY,  # Add the API key here
+                    },
+                    json=data
+                )
+
+                if response.text.strip():  # Ensure there is content to parse
+                    try:
+                        data = response.json()
+                        print("Parsed JSON Data:", data)
+                    except requests.exceptions.JSONDecodeError as e:
+                        print("Error parsing JSON:", e)
+                else:
+                    print("Empty response body.")
+                print("\n")
 
         # Read data from Supabase, sort by deceasing order of timestamp and only look at unprocessed commands
         commands = requests.get(
@@ -69,7 +71,7 @@ def main():
             for command in commands:
                 command_id = command['id']
 
-                # Parse command, allow buzzer, update_batter, mode
+                # Parse command, allow buzzer, update_battery, mode
                 if command['buzzer']: send_command('b')
                 if command['battery_req']: send_command("l")
                 if command['gps_req']: send_command("g")

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lora Data Dashboard</title>
+</head>
+<body>
+    <h1>Lora Data Dashboard</h1>
+    
+    <form id="filterForm">
+        <label for="mode">Enter User ID:</label>
+        <input type="text" id="mode" name="mode" value="{{ mode }}">
+        <button type="button" onclick="fetchData()">Filter</button>
+    </form>
+
+    <div id="current-user-display" style="margin: 15px 0; font-weight: bold;">
+        {% if mode %}
+            Currently viewing data for mode: <span style="color: #2ecc71;">{{ mode }}</span>
+        {% else %}
+            No mode selected - showing all data
+        {% endif %}
+    </div>
+
+    <h2>App Data</h2>
+    <table id=" command-table" border="1">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Buzzer</th>
+                <th>Mode</th>
+                <th>Battery Request</th>
+                <th>GPS Request</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in app_data %}
+            <tr>
+                <td>{{ item.timestamp }}</td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.buzzer }}</td>
+                <td>{{ item.mode }}</td>
+                <td>{{ item.battery }}</td>
+                <td>{{ item.gps }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Node Data</h2>
+    <table id="status-table" border="1">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Battery Level (%)</th>
+                <th>GPS Lattitude & Longitude</th>
+                <th>Sleep Mode</th>
+                <th>Test Message</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in node_data %}
+            <tr>
+                <td>{{ item.timestamp }}</td>
+                <td>{{ item.battery_level }}</td>
+                <td>{{ item.gps_lattitude }}, {{ item.gps_longitude }}</td>
+                <td>{{ item.sleep_mode }}</td>
+                <td>{{ item.test_message }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+    function fetchData() {
+        const user_id = document.getElementById('user_id').value;
+        const params = new URLSearchParams({ user_id });
+        
+        // Update both the page URL and content
+        window.history.replaceState({}, '', `?${params}`);
+        
+        fetch(`/api/data?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                updateTable('location-table', data.node_data, ['timestamp', 'latitude', 'longitude']);
+                updateTable('battery-table', data.app_data, ['timestamp', 'battery_level']);
+            });
+    }
+
+    function updateTable(tableId, data, columns) {
+        const tbody = document.querySelector(`#${tableId} tbody`);
+        tbody.innerHTML = data.map(item => `
+            <tr>
+                ${columns.map(col => `<td>${item[col]}</td>`).join('')}
+            </tr>
+        `).join('');
+    }
+
+    // Auto-refresh every 5 seconds
+    setInterval(fetchData, 5000);
+    
+    // Initial load
+    fetchData();
+    </script>
+</body>
+</html>
