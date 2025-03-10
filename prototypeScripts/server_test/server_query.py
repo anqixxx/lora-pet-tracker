@@ -16,9 +16,14 @@ def send_command(command):
 
 def main():
     try:
+        global mode
         global server
         server = serial.Serial(PORT, BAUD_RATE)
         print(f"Connected to {PORT} at {BAUD_RATE} baud")
+        
+        mode = 'n'
+        print('Starting in Normal Mode')
+
         time.sleep(2)  # Allow time for connection
     except serial.SerialException as e:
         print(f"Error opening serial port: {e}")
@@ -72,13 +77,14 @@ def main():
                 command_id = command['id']
 
                 # Parse command, allow buzzer, update_battery, mode
-                if command['buzzer']: send_command('b')
-                if command['battery_req']: send_command("l")
-                if command['gps_req']: send_command("g")
+                if not (command['buzzer'] is None): send_command('b') # fix how this toggles, just push through if either is not null, need to also filter for unprocessed commands in the future
+                if command['battery']: send_command("l")
+                if command['gps']: send_command("g")
                 if command['mode']:
-                    print(f"Sending {command['mode']} mode to LoRa server.") 
-                    send_command("s") # Need to figure out a way to save state of mode
-
+                    if mode !=  command['mode']:
+                        print(f"Sending {command['mode']} mode to LoRa server.") 
+                        send_command("s")
+            
                 # After sending, mark this command as processed in Supabase
                 update = requests.patch(
                     f"{SUPABASE_URL}/rest/v1/device_commands?id=eq.{command_id}&apikey={SUPABASE_KEY}",
