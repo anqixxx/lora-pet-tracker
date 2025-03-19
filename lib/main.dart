@@ -127,6 +127,26 @@ class MyAppState extends ChangeNotifier {
     }
   }
 
+    // Function to select mode
+  void selectMode(String mode) async {
+    print('mode : ' + mode);
+    try {
+      final response = await supabase.from('device_commands').insert({
+        'timestamp': DateTime.now().toUtc().toIso8601String(), 
+        'mode': mode,
+      });
+      if (response.error == null){
+        print("Mode command sent to Supabase");
+      } else{
+        print("Error sending command to Supabase: ${response.error.message}");
+      }
+
+    } catch (e) {
+      print("Unexpected error sending mode command: $e");
+    }
+  }
+
+
   @override
   void dispose() {
     _nodeDataSubscription?.cancel();
@@ -155,10 +175,12 @@ class _MyHomePageState extends State<MyHomePage> {
         throw UnimplementedError('no widget for $selectedIndex');
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Scaffold(
-          body: Row(
+  return LayoutBuilder(
+  builder: (context, constraints) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          Row(
             children: [
               if (showNavRail)
                 SafeArea(
@@ -191,17 +213,44 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ],
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              setState(() {
-                showNavRail = !showNavRail;
-              });
-            },
-            child: Icon(showNavRail ? Icons.menu_open : Icons.menu),
-            tooltip: showNavRail ? 'Hide navigation' : 'Show navigation',
+          
+          Positioned(
+            top: 10,
+            right: 10,
+            child: SafeArea(
+              child: IconButton(
+                onPressed: () {
+                  setState(() {
+                    showNavRail = !showNavRail;
+                  });
+                },
+                icon: Icon(
+                  showNavRail ? Icons.menu_open : Icons.menu,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  elevation: 4,
+                ),
+              ),
+            ),
           ),
-        );
-      },
+        ],
+      ),
+      );
+    },
+  );
+  }
+}
+
+class _TopRightFloatingActionButtonLocation extends FloatingActionButtonLocation {
+  const _TopRightFloatingActionButtonLocation();
+
+  @override
+  Offset getOffset(ScaffoldPrelayoutGeometry scaffoldGeometry) {
+    return Offset(
+      scaffoldGeometry.scaffoldSize.width - scaffoldGeometry.floatingActionButtonSize.width - 16.0,
+      16.0 // Top margin
     );
   }
 }
@@ -276,28 +325,6 @@ class MainPageState extends State<MainPage> {
       print(response.error);
     } catch (e) {
       print("Unexpected error sending stop speaker command: $e");
-    }
-  }
-
-  // Function to select mode
-  void selectMode() async {
-    if (normalmode){
-      print('sleep_mode');
-    }
-    try {
-      final response = await supabase.from('device_commands').insert({
-        'timestamp': DateTime.now().toUtc().toIso8601String(), 
-        'mode': 'n',
-      });
-
-      if (response.error == null){
-        print("Mode command sent to Supabase");
-      } else{
-        print("Error sending command to Supabase: ${response.error.message}");
-      }
-
-    } catch (e) {
-      print("Unexpected error sending mode command: $e");
     }
   }
 
@@ -476,6 +503,11 @@ class ModeSelectionWidget extends StatefulWidget {
 class ModeSelectionWidgetState extends State<ModeSelectionWidget> {
   bool normalmode = true; // Default to Normal Mode
 
+  void selectMode(String mode) {
+    final appState = Provider.of<MyAppState>(context, listen: false);
+    appState.selectMode(mode);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -490,6 +522,7 @@ class ModeSelectionWidgetState extends State<ModeSelectionWidget> {
                   });
                   print("Normal Mode on");
                 print("normalmode is: $normalmode");
+                selectMode('n');
 
                   // Normal Mode functionality here
                 },
@@ -510,6 +543,7 @@ class ModeSelectionWidgetState extends State<ModeSelectionWidget> {
                     normalmode = false; // Switch to Search Mode
                   });
                   print('Search mode on');
+                selectMode('s');
                   // Search Mode functionality here
                   
                 },
