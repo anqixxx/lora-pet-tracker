@@ -366,17 +366,33 @@ class MainPageState extends State<MainPage> {
           children: [
             // Map Section
             Expanded(
-              child: ClipRRect(
+              child: Stack(
+              children: [
+                ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: FlutterMap(
                   options: MapOptions(
-                    initialCenter: LatLng(49.2827, -123.1207), // Center map on Vancouver
-                    initialZoom: 13.0,
+                  initialCenter: LatLng(49.2827, -123.1207), // Center map on Vancouver
+                  initialZoom: 13.0,
                   ),
                   children: [
-                    map(),
+                  map(),
                   ],
                 ),
+                ),
+                Positioned(
+                bottom: 16,
+                right: 16,
+                child: FloatingActionButton(
+                  onPressed: () {
+                  final appState = Provider.of<MyAppState>(context, listen: false);
+                  appState.requestGPS();
+                  },
+                  mini: true,
+                  child: Icon(Icons.refresh),
+                ),
+                ),
+              ],
               ),
             ),
             SizedBox(height: 20),
@@ -531,7 +547,6 @@ class ModeSelectionWidgetState extends State<ModeSelectionWidget> {
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
       children: [
         ElevatedButton(
           onPressed: normalmode
@@ -575,13 +590,6 @@ class ModeSelectionWidgetState extends State<ModeSelectionWidget> {
           ),
           child: Text("Search Mode"),
         ),
-        IconButton(
-          iconSize: 10, // Set the desired size (default is 24)
-          icon: Icon(Icons.refresh),
-          onPressed: () {
-            requestGPS();
-          },
-        )
       ],
     );
   }
@@ -691,7 +699,7 @@ Widget map() {
 
         return Consumer<MyAppState>(
           builder: (context, appState, child) {
-            final latestPosition = appState.latestGpsData; 
+            final latestPosition = appState.latestGpsData;
 
             // Initialize the list of markers with the current location marker.
             List<Marker> markers = [
@@ -700,7 +708,10 @@ Widget map() {
                 height: 80.0,
                 point: initialCenter,
                 alignment: Alignment.center,
-                child: Icon(Icons.location_on, color: Colors.red, size: 40),
+                child: Tooltip(
+                  message: 'Accessed at: ${DateFormat('hh:mm a MMM dd').format(DateTime.now())}',
+                  child: Icon(Icons.location_on, color: Colors.red, size: 40),
+                ),
               ),
             ];
 
