@@ -658,7 +658,7 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
       height: 80.0,
       point: initialCenter,
       alignment: Alignment.center,
-      child: Icon(Icons.location_on, color: Colors.red, size: 40),
+      child: Icon(Icons.location_on, color: Colors.black, size: 30),
     ),
   ];
 
@@ -674,7 +674,7 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
         height: 50.0,
         point: point,
         alignment: Alignment.center,
-        child: Icon(Icons.location_on, color: Colors.black, size: 20),
+        child: Icon(Icons.location_on, color: Colors.red, size: 30),
       );
     }).toList());
   }
@@ -704,13 +704,24 @@ Widget map() {
             // Initialize the list of markers with the current location marker.
             List<Marker> markers = [
               Marker(
-                width: 80.0,
-                height: 80.0,
-                point: initialCenter,
-                alignment: Alignment.center,
-                child: Tooltip(
-                  message: 'Accessed at: ${DateFormat('hh:mm a MMM dd').format(DateTime.now())}',
-                  child: Icon(Icons.location_on, color: Colors.red, size: 40),
+              width: 80.0,
+              height: 80.0,
+              point: initialCenter,
+                alignment: Alignment.topCenter, // Align marker from the top
+                child: GestureDetector(
+                onTap: () {
+                  final snackBar = SnackBar(
+                  content: Text(
+                    'GPS Time ${DateFormat('hh:mm a MMM dd').format(DateTime.now())}',
+                    textAlign: TextAlign.center,
+                  ),
+                  duration: Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                  margin: EdgeInsets.only(top: 10, left: 20, right: 20),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                },
+                child: Icon(Icons.location_on, color: Colors.red, size: 40),
                 ),
               ),
             ];
