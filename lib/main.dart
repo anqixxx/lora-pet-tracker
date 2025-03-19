@@ -113,14 +113,12 @@ class MyAppState extends ChangeNotifier {
     print("Requesting Battery Update");
 
     try {
-      print('Before Supabase insert');
       final response = await supabase.from('device_commands').insert({
           'timestamp': DateTime.now().toUtc().toIso8601String(),
           'battery': true,
           'status': false,
           'device_id': deviceId,      
         });
-      print('After Supabase insert');
       print(response.error);
     } catch (e) {
       print("Unexpected error sending battery request: $e");
@@ -146,6 +144,21 @@ class MyAppState extends ChangeNotifier {
     }
   }
 
+  void requestGPS() async {
+    print("Requesting GPS Update");
+
+    try {
+      final response = await supabase.from('device_commands').insert({
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+          'gps': true,
+          'status': false,
+          'device_id': deviceId,      
+        });
+      print(response.error);
+    } catch (e) {
+      print("Unexpected error sending gps request: $e");
+    }
+  }
 
   @override
   void dispose() {
@@ -265,7 +278,6 @@ class MainPageState extends State<MainPage> {
   bool _isRunning = false; // Variable to check if countdown is running
   Timer? _timer; // Timer for countdown
   bool normalmode = true; 
-  // Add a mode state
 
   final supabase = Supabase.instance.client;
 
@@ -341,9 +353,9 @@ class MainPageState extends State<MainPage> {
         title: Text(
           "🐈 🐈 🐈",
           style: TextStyle(
-            fontFamily: 'YourCustomFont', // Replace with the actual font family name
-            fontSize: 15, // Adjust the size as needed
-            fontWeight: FontWeight.bold, // Optional
+            fontFamily: 'font',
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
@@ -399,6 +411,7 @@ class MainPageState extends State<MainPage> {
                   },
 
                   style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.black,
                     backgroundColor: Colors.red,
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     minimumSize: Size(100, 50),
@@ -473,7 +486,8 @@ class BatteryIndicator extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          width: 40, // Width of the battery indicator
+          width: 110, // Width of the battery indicator
+          height: 10,
           child: LinearProgressIndicator(
             value: batteryLevel,
             backgroundColor: Colors.grey[300],
@@ -508,10 +522,16 @@ class ModeSelectionWidgetState extends State<ModeSelectionWidget> {
     appState.selectMode(mode);
   }
 
+  void requestGPS() {
+    final appState = Provider.of<MyAppState>(context, listen: false);
+    appState.requestGPS();
+  } 
+
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
         ElevatedButton(
           onPressed: normalmode
@@ -555,6 +575,13 @@ class ModeSelectionWidgetState extends State<ModeSelectionWidget> {
           ),
           child: Text("Search Mode"),
         ),
+        IconButton(
+          iconSize: 10, // Set the desired size (default is 24)
+          icon: Icon(Icons.refresh),
+          onPressed: () {
+            requestGPS();
+          },
+        )
       ],
     );
   }
@@ -727,8 +754,10 @@ Widget battery() {
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisSize: MainAxisSize.min,
           children: [
             BatteryIndicator(batteryLevel: batteryPercent / 100), // Replace with actual battery level variable
+            SizedBox(width: 30),
             Column(
               children: [
                 Text("Last Checked"),
@@ -741,6 +770,7 @@ Widget battery() {
                     appState.requestBattery();
                   },
             )
+   
           ],
           
         );
