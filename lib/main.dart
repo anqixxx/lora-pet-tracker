@@ -54,6 +54,8 @@ class MyAppState extends ChangeNotifier {
   List<Map<String, dynamic>> batteryLevelList = [];
   List<Map<String, dynamic>> commands = [];
   // Tuple of batteryLevel
+  final ValueNotifier<Map<String, dynamic>?> latestGpsNotifier = ValueNotifier(null);
+  final ValueNotifier<Map<String, dynamic>?> latestBatteryNotifier = ValueNotifier(null);
 
   MyAppState() {
     print("MyAppState initialized!");  // Debugging
@@ -88,6 +90,17 @@ class MyAppState extends ChangeNotifier {
               })
           .toList();
       print("Updated battery level list: $batteryLevelList");  // Debugging line
+
+      final newLatestGpsData = gpsDataList.isNotEmpty ? gpsDataList.last : null;
+      if (newLatestGpsData != latestGpsNotifier.value) {
+        latestGpsNotifier.value = newLatestGpsData;
+      }
+
+      // Update battery notifier when new data is available
+      final newLatestBatteryData = batteryLevelList.isNotEmpty ? batteryLevelList.last : null;
+      if (newLatestBatteryData != latestBatteryNotifier.value) {
+        latestBatteryNotifier.value = newLatestBatteryData;
+      }
 
       notifyListeners();
     });
@@ -162,6 +175,8 @@ class MyAppState extends ChangeNotifier {
 
   @override
   void dispose() {
+    latestGpsNotifier.dispose();
+    latestBatteryNotifier.dispose();
     _nodeDataSubscription?.cancel();
     super.dispose();
   }
@@ -274,32 +289,8 @@ class MainPage extends StatefulWidget {
 }
 
 class MainPageState extends State<MainPage> {
-  int _start = 0; // Variable to keep track of the countdown
-  bool _isRunning = false; // Variable to check if countdown is running
-  Timer? _timer; // Timer for countdown
-  bool normalmode = true; 
-
   final supabase = Supabase.instance.client;
 
-  void startCountdown() {
-    setState(() {
-      _start = 30; // Set countdown to 30 seconds
-      _isRunning = true; // Mark countdown as running
-    });
-    
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (_start > 0) {
-        setState(() {
-          _start--; // Decrement countdown
-        });
-      } else {
-        timer.cancel(); // Cancel timer when countdown reaches zero
-        stopSpeaker(); // Stop the speaker when countdown reaches 0
-        }
-    });
-  }
-
-  // Function to send a buzzer on
   void startSpeaker() async {
     try {
       final response = await supabase.from('device_commands').insert({
@@ -309,41 +300,33 @@ class MainPageState extends State<MainPage> {
         'device_id': deviceId,
       });
 
-      if (response.error == null){
+      if (response.error == null) {
         print("Speaker command sent to Supabase");
-      } else{
+      } else {
         print("Error sending command to Supabase: ${response.error.message}");
       }
-
     } catch (e) {
       print("Unexpected error sending speaker command: $e");
     }
   }
 
-  void stopSpeaker() async{
-    _timer?.cancel();
-    setState(() {
-      _isRunning = false;
-      _start = 0; // Reset countdown
-    });
-
+  void stopSpeaker() async {
     try {
       final response = await supabase.from('device_commands').insert({
-        'timestamp': DateTime.now().toUtc().toIso8601String(), 
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
         'buzzer': false,
         'status': false,
         'device_id': deviceId,
       });
-      print(response.error);
+
+      if (response.error == null) {
+        print("Stop speaker command sent to Supabase");
+      } else {
+        print("Error sending stop command to Supabase: ${response.error.message}");
+      }
     } catch (e) {
       print("Unexpected error sending stop speaker command: $e");
     }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel(); // Cancel timer on dispose
-    super.dispose();
   }
 
   @override
@@ -367,32 +350,24 @@ class MainPageState extends State<MainPage> {
             // Map Section
             Expanded(
               child: Stack(
-              children: [
-                ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: FlutterMap(
-                  options: MapOptions(
-                  initialCenter: LatLng(49.2827, -123.1207), // Center map on Vancouver
-                  initialZoom: 13.0,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: MapWidget(), // Use the new MapWidget here
                   ),
-                  children: [
-                  map(),
-                  ],
-                ),
-                ),
-                Positioned(
-                bottom: 16,
-                right: 16,
-                child: FloatingActionButton(
-                  onPressed: () {
-                  final appState = Provider.of<MyAppState>(context, listen: false);
-                  appState.requestGPS();
-                  },
-                  mini: true,
-                  child: Icon(Icons.refresh),
-                ),
-                ),
-              ],
+                  Positioned(
+                    bottom: 16,
+                    right: 16,
+                    child: FloatingActionButton(
+                      onPressed: () {
+                        final appState = Provider.of<MyAppState>(context, listen: false);
+                        appState.requestGPS();
+                      },
+                      mini: true,
+                      child: Icon(Icons.refresh),
+                    ),
+                  ),
+                ],
               ),
             ),
             SizedBox(height: 20),
@@ -403,65 +378,14 @@ class MainPageState extends State<MainPage> {
             SizedBox(height: 20),
 
             // Battery Selection            
-            battery(),
+            battery(context),
 
             SizedBox(height: 20),
             
             // Speaker and Timer Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    print("Speaker button pressed");
-                    if (_isRunning) {
-                    // Reset countdown if already running
-                      setState(() {
-                      _start = 30; // Reset countdown
-                    });
-                    } else {
-                      startCountdown(); // Start countdown if not running
-                    }
-                    // Send Firestore command for the speaker
-                    startSpeaker();                  
-                  },
-
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.black,
-                    backgroundColor: Colors.red,
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    minimumSize: Size(100, 50),
-                    textStyle: TextStyle(fontSize: 16)
-                  ),
-
-                  child: Text("Speaker"),
-                ),
-                SizedBox(width: 20),
-                if (_isRunning)
-                ...[
-                  // Countdown
-                  Container(
-                    width: 40,
-                    alignment: Alignment.center,
-                    child: Text(
-                      '$_start', // Display countdown value
-                      style: TextStyle(fontSize: 20),
-                    ),
-                  ),
-                  SizedBox(width: 10),
-                  
-                  // Square Stop button
-                  SizedBox(
-                    width: 50, // Set width for the square
-                    height: 50, // Set height for the square
-                    child: IconButton(
-                      onPressed: stopSpeaker, // Stop the speaker when pressed
-                      icon: Icon(Icons.stop, color: Colors.grey), // "X" icon in white
-                      iconSize: 30, // Icon size
-                    ),
-                  ),
-                ],
-              ],
+            SpeakerTimerWidget(
+              onStartSpeaker: startSpeaker,
+              onStopSpeaker: stopSpeaker,
             ),
           ],
         ),
@@ -682,95 +606,91 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
   return markers;
 }
 
-Widget map() {
-  return FutureBuilder<Position>(
-    future: _getCurrentLocation(),
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        // Show a loading indicator while waiting for the location.
-        return Center(child: CircularProgressIndicator());
-      } else if (snapshot.hasError) {
-        // Show an error message if location cannot be accessed.
-        return Center(child: Text('Error: ${snapshot.error}'));
-      } else {
-        // Use the current location for the initial center of the map.
-        final position = snapshot.data;
-        final initialCenter = LatLng(position!.latitude, position.longitude);
+class MapWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Position>(
+      future: _getCurrentLocation(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else {
+          final position = snapshot.data;
+          final initialCenter = LatLng(position!.latitude, position.longitude);
 
-        return Consumer<MyAppState>(
-          builder: (context, appState, child) {
-            final latestPosition = appState.latestGpsData;
-
-            // Initialize the list of markers with the current location marker.
-            List<Marker> markers = [
-              Marker(
-              width: 80.0,
-              height: 80.0,
-              point: initialCenter,
-                alignment: Alignment.topCenter, // Align marker from the top
-                child: GestureDetector(
-                onTap: () {
-                  final snackBar = SnackBar(
-                  content: Text(
-                    'GPS Time ${DateFormat('hh:mm a MMM dd').format(DateTime.now())}',
-                    textAlign: TextAlign.center,
-                  ),
-                  duration: Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                  margin: EdgeInsets.only(top: 10, left: 20, right: 20),
-                  );
-                  ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                },
-                child: Icon(Icons.location_on, color: Colors.red, size: 40),
-                ),
-              ),
-            ];
-
-            // Add a black marker for the latest GPS data if it exists.
-            if (latestPosition != null && latestPosition.isNotEmpty) {
-              final latitude = latestPosition['lat'] as double;
-              final longitude = latestPosition['long'] as double;
-              final point = LatLng(latitude, longitude);
-
-              markers.add(
+          return ValueListenableBuilder<Map<String, dynamic>?>(
+            valueListenable: Provider.of<MyAppState>(context, listen: false).latestGpsNotifier,
+            builder: (context, latestPosition, child) {
+              List<Marker> markers = [
                 Marker(
                   width: 80.0,
                   height: 80.0,
-                  point: point,
-                  alignment: Alignment.center,
-                  child: Icon(Icons.location_on, color: Colors.black, size: 40),
+                  point: initialCenter,
+                  alignment: Alignment.topCenter,
+                  child: GestureDetector(
+                    onTap: () {
+                      final snackBar = SnackBar(
+                        content: Text(
+                          'GPS Time ${DateFormat('hh:mm a MMM dd').format(DateTime.now())}',
+                          textAlign: TextAlign.center,
+                        ),
+                        duration: Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                        margin: EdgeInsets.only(top: 10, left: 20, right: 20),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                    },
+                    child: Icon(Icons.location_on, color: Colors.red, size: 40),
+                  ),
                 ),
-              );
-            }
+              ];
 
-            return FlutterMap(
-              options: MapOptions(
-                initialCenter: initialCenter,
-                initialZoom: 13, // Set your preferred initial zoom level.
-                interactionOptions: const InteractionOptions(flags: ~InteractiveFlag.doubleTapZoom),
-              ),
-              children: [
-                openStreetMapTileLayer,
-                MarkerLayer(
-                  markers: markers,
+              if (latestPosition != null) {
+                final latitude = latestPosition['lat'] as double;
+                final longitude = latestPosition['long'] as double;
+                final point = LatLng(latitude, longitude);
+
+                markers.add(
+                  Marker(
+                    width: 80.0,
+                    height: 80.0,
+                    point: point,
+                    alignment: Alignment.center,
+                    child: Icon(Icons.location_on, color: Colors.black, size: 40),
+                  ),
+                );
+              }
+
+              return FlutterMap(
+                options: MapOptions(
+                  initialCenter: initialCenter,
+                  initialZoom: 13,
+                  interactionOptions: const InteractionOptions(flags: ~InteractiveFlag.doubleTapZoom),
                 ),
-              ],
-            );
-          },
-        );
-      }
-    },
-  );
+                children: [
+                  openStreetMapTileLayer,
+                  MarkerLayer(
+                    markers: markers,
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      },
+    );
+  }
 }
 
-Widget battery() {
-  return Consumer<MyAppState>(
-    builder: (context, appState, child) {
-      final latestPercentage = appState.latestBatteryLevel;
-
-      if (latestPercentage != null && latestPercentage.isNotEmpty) {
-        final batteryPercent = latestPercentage['battery'];
-        final time = latestPercentage['time'];
+Widget battery(BuildContext context) {
+  return ValueListenableBuilder<Map<String, dynamic>?>(
+    valueListenable: Provider.of<MyAppState>(context, listen: false).latestBatteryNotifier,
+    builder: (context, latestBattery, child) {
+      if (latestBattery != null && latestBattery.isNotEmpty) {
+        final batteryPercent = latestBattery['battery'];
+        final time = latestBattery['time'];
         DateTime formattedTime = DateTime.parse(time);
         String formattedDate = DateFormat('hh:mm a MMM dd').format(formattedTime);
 
@@ -778,23 +698,21 @@ Widget battery() {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           mainAxisSize: MainAxisSize.min,
           children: [
-            BatteryIndicator(batteryLevel: batteryPercent / 100), // Replace with actual battery level variable
+            BatteryIndicator(batteryLevel: batteryPercent / 100),
             SizedBox(width: 30),
             Column(
               children: [
                 Text("Last Checked"),
-                Text(formattedDate), 
+                Text(formattedDate),
               ],
             ),
             IconButton(
-                  icon: Icon(Icons.refresh),
-                  onPressed: () {
-                    appState.requestBattery();
-                  },
-            )
-   
+              icon: Icon(Icons.refresh),
+              onPressed: () {
+                Provider.of<MyAppState>(context, listen: false).requestBattery();
+              },
+            ),
           ],
-          
         );
       } else {
         return Text("No battery data available");
@@ -831,4 +749,110 @@ Future<Position> _getCurrentLocation() async {
 
   // When permission is granted, get the current position.
   return await Geolocator.getCurrentPosition();
+}
+
+class SpeakerTimerWidget extends StatefulWidget {
+  final void Function() onStartSpeaker;
+  final void Function() onStopSpeaker;
+
+  const SpeakerTimerWidget({
+    required this.onStartSpeaker,
+    required this.onStopSpeaker,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  _SpeakerTimerWidgetState createState() => _SpeakerTimerWidgetState();
+}
+
+class _SpeakerTimerWidgetState extends State<SpeakerTimerWidget> {
+  int _start = 0; // Countdown timer value
+  bool _isRunning = false; // Whether the timer is running
+  Timer? _timer; // Timer instance
+
+  void startCountdown() {
+    setState(() {
+      _start = 30; // Set countdown to 30 seconds
+      _isRunning = true; // Mark timer as running
+    });
+
+    widget.onStartSpeaker(); // Trigger the start speaker callback
+
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      if (_start > 0) {
+        setState(() {
+          _start--; // Decrement countdown
+        });
+      } else {
+        stopCountdown(); // Stop the timer when it reaches 0
+      }
+    });
+  }
+
+  void stopCountdown() {
+    _timer?.cancel();
+    setState(() {
+      _isRunning = false;
+      _start = 0; // Reset countdown
+    });
+
+    widget.onStopSpeaker(); // Trigger the stop speaker callback
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // Cancel the timer on dispose
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ElevatedButton(
+          onPressed: () {
+            if (_isRunning) {
+              setState(() {
+                _start = 30; // Reset countdown if already running
+              });
+            } else {
+              startCountdown(); // Start countdown if not running
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            foregroundColor: Colors.black,
+            backgroundColor: Colors.red,
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            minimumSize: Size(100, 50),
+            textStyle: TextStyle(fontSize: 16),
+          ),
+          child: Text("Speaker"),
+        ),
+        SizedBox(width: 20),
+        if (_isRunning) ...[
+          // Countdown display
+          Container(
+            width: 40,
+            alignment: Alignment.center,
+            child: Text(
+              '$_start',
+              style: TextStyle(fontSize: 20),
+            ),
+          ),
+          SizedBox(width: 10),
+          // Stop button
+          SizedBox(
+            width: 50,
+            height: 50,
+            child: IconButton(
+              onPressed: stopCountdown,
+              icon: Icon(Icons.stop, color: Colors.grey),
+              iconSize: 30,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }
