@@ -10,6 +10,26 @@ SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 PORT = '/dev/tty.usbmodem1101'  
 BAUD_RATE = 115200          
 
+# Message Types
+ACK = 0
+SEND_GPS = 1
+REQUEST_GPS = 2
+MODE_TOGGLE = 3
+SPEAKER_TOGGLE = 4
+SEND_BATTERY = 5
+REQUEST_BATTERY = 6
+SLEEP = 7
+
+# Database Mapping
+COMMAND_MAP = {
+    REQUEST_GPS: "gps",
+    REQUEST_BATTERY: "battery",
+}
+
+
+def read_command(command):
+    command_id = command[0]
+
 def send_command(command):
         print(f"Sending command to LoRa server: {command}\n")
         server.write(f"{command}\n".encode('utf-8'))

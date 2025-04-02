@@ -124,7 +124,7 @@ def merge():
     elif mode and mode.lower() == 'exp':
         user_id = 2
     
-    print(f'mode updated: {mode}')
+    # print(f'mode updated: {mode}')
 
     if user_id:
         node_data = supabase.from_('device_status').select('*').eq("device_id", user_id).order('timestamp', desc=True).execute().data

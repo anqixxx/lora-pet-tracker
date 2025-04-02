@@ -35,9 +35,12 @@
         <tbody>
             {% for item in data %}
             {% if item.device == 'app' %}
-                <tr style="background-color: hsl(246, 68%, 76%);">
+                <!-- <tr style="background-color: hsl(246, 68%, 76%);"> -->
+                <tr style="background-color: rgb(173, 209, 157);">
             {% else%}
-                <tr style="background-color: hsl(329, 68%, 83%);">
+                <!-- <tr style="background-color: hsl(329, 68%, 83%);"> -->
+                <tr style="background-color: rgb(170, 211, 224);">
+
             {% endif%}
                 <td>{{ item.timestamp | datetime }}</td>
                 <td>{{ item.msg }}</td>

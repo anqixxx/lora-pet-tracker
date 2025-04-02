@@ -99,7 +99,7 @@ void getGPS(uint8_t dataGPS[]) {
   dataGPS[10] = latDD & 0xFF;
   dataGPS[11] = (int(GPS.longitudeDegrees) << 7) | lon;
   uint32_t lonDD = int(GPS.longitudeDegrees * 1000000) % 1000000;  // fractional degrees (up to 20 bits), 6 digits
-  dataGPS[12] = (lonDD >> 16) & 0xFF;
+  dataGPS[12] = (lonDD >> 16) & 0xFF; 
   dataGPS[13] = (lonDD >> 8) & 0xFF;
   dataGPS[14] = lonDD & 0xFF;
   dataGPS[15] = 100;  // battery status
