@@ -45,7 +45,7 @@ def filter_node(node_data):
         
         if data['test_message']:
             msg += str(data['test_message']) + '\n'
-        if data['sleep_mode']:
+        if data['sleep']:
             msg += 'Sleep mode turned on'
             
         filtered_data['msg'] = msg
@@ -90,7 +90,7 @@ def filter(node_data, app_data):
             msg += 'Battery: ' + str(data['battery_level'])  + ' % | '
         if data['test_message']:
             msg += str(data['test_message']) + '\n'
-        if data['sleep_mode']:
+        if data['sleep']:
             msg += 'Sleep mode turned on'
             
         filtered_data['msg'] = msg

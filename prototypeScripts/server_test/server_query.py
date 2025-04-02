@@ -1,13 +1,15 @@
 import serial
 import requests
 import time
+from datetime import datetime, timezone
+
 
 # Supabase URL and API key
 SUPABASE_URL = "https://mgrgaxqqtvqttxvulbnk.supabase.co"
 SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ncmdheHFxdHZxdHR4dnVsYm5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc0MDUyMDgsImV4cCI6MjA1Mjk4MTIwOH0.A3VybPyJGZ3Bm2rfe1BMZLM_51eVKFmW0uEGSi6qZhI'
 
 # Serial port and baud rate
-PORT = '/dev/tty.usbmodem1101'  
+PORT = '/dev/tty.usbmodem101'  
 BAUD_RATE = 115200          
 
 # Message Types
@@ -50,6 +52,7 @@ def main():
         while server.in_waiting > 0:
             # Read data from base station
             print("Reading from LoRa server...")
+            data = None
             message = server.readline().decode('utf-8').strip()
             # message = server.read(server.in_waiting).decode('utf-8').strip()
             print(f"Received from LoRa server: {message}\n")
@@ -111,12 +114,21 @@ def main():
                         print(f"Sending {command['mode']} mode to LoRa server.") 
                         send_command("mode")
                 if not (command['buzzer'] is None):
-                    # MAKE SURE TIME IS WITHIN 30 SECONDS FIRST
+                    timestamp = datetime.fromisoformat(command['timestamp'])
+                    now = datetime.now(timezone.utc)
+
+                    if ( abs((now - timestamp).total_seconds()) <= 30):
+                        print("Buzzer command within 30 seconds")
+                        if (command['buzzer']):
+                            send_command("buzzer_on") # fix how this toggles, just push through if either is not null, need to also filter for unprocessed commands in the future
+                        else:
+                            send_command("buzzer_off")
+                
                     if (command['buzzer']):
                         send_command("buzzer_on") # fix how this toggles, just push through if either is not null, need to also filter for unprocessed commands in the future
                     else:
                         send_command("buzzer_off")
-                        
+
                 # After sending, mark this command as processed in Supabase
                 update = requests.patch(
                     f"{SUPABASE_URL}/rest/v1/device_commands?id=eq.{command_id}&apikey={SUPABASE_KEY}",

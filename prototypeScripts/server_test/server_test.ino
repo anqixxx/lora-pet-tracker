@@ -35,7 +35,7 @@ float frequency = 921.2; //americas
 
 volatile int messageID = 0;
 
-void sendSerialData(int message_type, uint8_t message){
+void sendSerialData(uint8_t message_type, uint8_t* message){
   if (message_type == SEND_GPS){ // Recieving 1 GPS Reading and 1 Battery Level
     SerialUSB.print("SEND_GPS ");
     for (int i = 9; i < 17; i++) // 9 to 16 inclusive is gps, 17 is battery
@@ -52,14 +52,14 @@ void sendSerialData(int message_type, uint8_t message){
     SerialUSB.print("SEND_BATTERY ");
     SerialUSB.print(message[17]);
   }
-  else if (message_type == SLEEP){ Sleep Mode on
-    SerialUSB.print("SLEEP ");
+  else if (message_type == SLEEP){ // Sleep Mode on
+    SerialUSB.print("SLEEP");
   }
   else {
     SerialUSB.print("Unidentified Message Type: ");
 
-    for (uint8_t x:buf){
-      SerialUSB.print(x);
+    for (int i = 0; i < RH_RF95_MAX_MESSAGE_LEN; i++){
+      SerialUSB.print(message[i]);
       SerialUSB.print(" ");
     }
   }
@@ -80,6 +80,7 @@ void handleSerialCommand(){
       message[1] = SPEAKER_ON; // buzzer
       messageToSend = true;
       SerialUSB.println("'Buzzer on'  message locked and loaded");
+  }
   else if (serialCommand == "buzzer_off"){
         message[0] = messageID;
         message[1] = SPEAKER_OFF; // buzzer
