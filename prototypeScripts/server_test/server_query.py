@@ -23,12 +23,6 @@ SEND_BATTERY = 6
 REQUEST_BATTERY = 7
 SLEEP = 8
 
-# Database Mapping
-COMMAND_MAP = {
-    REQUEST_GPS: "gps",
-    REQUEST_BATTERY: "battery",
-}
-
 def send_command(command):
         print(f"Sending command to LoRa server: {command}\n")
         server.write(f"{command}\n".encode('utf-8'))

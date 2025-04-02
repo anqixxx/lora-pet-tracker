@@ -29,7 +29,7 @@ def filter_app(app_data):
             elif pair[0] == 'mode':
                 command += str(f'Request Mode {pair[1]}')
             else:
-                command += str(f'Request {pair[0]} data')
+                command += str(f'Request {pair[0].capitalize()} Data')
 
         filtered_data['msg'] = command
         filtered.append(filtered_data)
@@ -73,7 +73,7 @@ def filter(node_data, app_data):
             elif pair[0] == 'mode':
                 command += str(f'Request Mode {pair[1]}')
             else:
-                command += str(f'Request {pair[0]} data')
+                command += str(f'Request {pair[0].capitalize()} Data')
 
         filtered_data['msg'] = command
         filtered.append(filtered_data)
