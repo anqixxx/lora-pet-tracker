@@ -701,14 +701,30 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
       final latitude = data['lat'] as double;
       final longitude = data['long'] as double;
       final point = LatLng(latitude, longitude);
+      final time = data['time'];
+      final localTime = DateFormat('hh:mm a MMM dd').format(time);
 
       return Marker(
         width: 50.0,
         height: 50.0,
         point: point,
         alignment: Alignment.center,
-        child: Icon(Icons.location_on, color: Colors.red, size: 30),
-      );
+        child: GestureDetector(
+                onTap: () {
+                  final snackBar = SnackBar(
+                    content: Text(
+                      'GPS Time $localTime',
+                      textAlign: TextAlign.center,
+                    ),
+                    duration: Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                    margin: EdgeInsets.only(top: 10, left: 20, right: 20),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                },
+                child: Icon(Icons.location_on, color: Colors.red, size: 40),
+              ),
+    );
     }).toList());
   }
 
