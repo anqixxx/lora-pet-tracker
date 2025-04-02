@@ -10,19 +10,63 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Setup
 final Color defaultColor = Color.fromARGB(255, 229, 156, 150);
-final int deviceId = 0; // 0 for actual, 1 for test, 2 for experimental
+const int deviceId = 0; // 0 for actual, 1 for test, 2 for experimental
+final ValueNotifier<bool> isSleepMode = ValueNotifier(false);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   print('Flutter Initialized');
 
-  await Supabase.initialize(
-    url: 'https://mgrgaxqqtvqttxvulbnk.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ncmdheHFxdHZxdHR4dnVsYm5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc0MDUyMDgsImV4cCI6MjA1Mjk4MTIwOH0.A3VybPyJGZ3Bm2rfe1BMZLM_51eVKFmW0uEGSi6qZhI',
-  );
-  
-  runApp(MyApp());
-  print("Supabase Initialized");
+  try {
+    await Supabase.initialize(
+      url: 'https://mgrgaxqqtvqttxvulbnk.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ncmdheHFxdHZxdHR4dnVsYm5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc0MDUyMDgsImV4cCI6MjA1Mjk4MTIwOH0.A3VybPyJGZ3Bm2rfe1BMZLM_51eVKFmW0uEGSi6qZhI',
+    );
+    print("Supabase Initialized");
+    runApp(MyApp());
+  } catch (e) {
+    print("Failed to initialize Supabase: $e");
+    runApp(DatabaseErrorApp()); // error app instead of just an empty container
+    return;
+  }
+
+}
+
+class DatabaseErrorApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text(
+                'Database Connection Error',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Unable to connect to the database. Please check your internet connection and Supabase credentials and try again later.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  // Attempt to restart the app
+                  main();
+                },
+                child: Text('Retry Connection'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -100,6 +144,25 @@ class MyAppState extends ChangeNotifier {
       final newLatestBatteryData = batteryLevelList.isNotEmpty ? batteryLevelList.last : null;
       if (newLatestBatteryData != latestBatteryNotifier.value) {
         latestBatteryNotifier.value = newLatestBatteryData;
+      }
+
+      // Find latest sleep mode time and latest non sleep mode time. If the former is most recent, we are in sleep mode and no GPS data is sent
+      final sleepEntries = data.where((entry) => entry['sleep'] == true && entry['timestamp'] != null);
+      
+      if (sleepEntries.isNotEmpty) {
+        final latestSleepEntry = sleepEntries.reduce((a, b) => DateTime.parse(a['timestamp']).isAfter(DateTime.parse(b['timestamp'])) ? a : b);
+        
+        final sleepTimestamp = DateTime.parse(latestSleepEntry['timestamp']);
+        
+        final modeChangeAfterSleep = data.any((entry) => 
+          entry['mode'] != null && 
+          entry['timestamp'] != null &&
+          DateTime.parse(entry['timestamp']).isAfter(sleepTimestamp)
+        );
+        
+        isSleepMode.value = !modeChangeAfterSleep;
+        
+        print("Sleep Mode Status: ${isSleepMode.value}");
       }
 
       notifyListeners();
@@ -633,6 +696,35 @@ class MapWidget extends StatelessWidget {
                     onTap: () {
                       final snackBar = SnackBar(
                         content: Text(
+                          'Your Time ${DateFormat('hh:mm a MMM dd').format(DateTime.now())}',
+                          textAlign: TextAlign.center,
+                        ),
+                        duration: Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                        margin: EdgeInsets.only(top: 10, left: 20, right: 20),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                    },
+                    child: Icon(Icons.location_on, color: Colors.black, size: 40),
+                  ),
+                ),
+              ];
+
+              if (latestPosition != null) {
+                final latitude = latestPosition['lat'] as double;
+                final longitude = latestPosition['long'] as double;
+                final point = LatLng(latitude, longitude);
+
+                markers.add(
+                  Marker(
+                  width: 80.0,
+                  height: 80.0,
+                  point: point,
+                  alignment: Alignment.center,
+                  child: GestureDetector(
+                    onTap: () {
+                      final snackBar = SnackBar(
+                        content: Text(
                           'GPS Time ${DateFormat('hh:mm a MMM dd').format(DateTime.now())}',
                           textAlign: TextAlign.center,
                         ),
@@ -645,21 +737,6 @@ class MapWidget extends StatelessWidget {
                     child: Icon(Icons.location_on, color: Colors.red, size: 40),
                   ),
                 ),
-              ];
-
-              if (latestPosition != null) {
-                final latitude = latestPosition['lat'] as double;
-                final longitude = latestPosition['long'] as double;
-                final point = LatLng(latitude, longitude);
-
-                markers.add(
-                  Marker(
-                    width: 80.0,
-                    height: 80.0,
-                    point: point,
-                    alignment: Alignment.center,
-                    child: Icon(Icons.location_on, color: Colors.black, size: 40),
-                  ),
                 );
               }
 
