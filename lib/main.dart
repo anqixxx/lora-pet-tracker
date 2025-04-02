@@ -201,7 +201,7 @@ class MyAppState extends ChangeNotifier {
 
     // Function to select mode
   void selectMode(String mode) async {
-    print('mode : ' + mode);
+    print('Mode : $mode');
     try {
       final response = await supabase.from('device_commands').insert({
         'timestamp': DateTime.now().toUtc().toIso8601String(), 
@@ -746,6 +746,9 @@ class MapWidget extends StatelessWidget {
                 final latitude = latestPosition['lat'] as double;
                 final longitude = latestPosition['long'] as double;
                 final point = LatLng(latitude, longitude);
+                final time = latestPosition['time'];
+                DateTime formattedTime = DateTime.parse(time);
+                String formattedDate = DateFormat('hh:mm a MMM dd').format(formattedTime);
 
                 markers.add(
                   Marker(
@@ -755,9 +758,10 @@ class MapWidget extends StatelessWidget {
                   alignment: Alignment.center,
                   child: GestureDetector(
                     onTap: () {
+
                       final snackBar = SnackBar(
                         content: Text(
-                          'GPS Time ${DateFormat('hh:mm a MMM dd').format(DateTime.now())}',
+                          'GPS Time $formattedDate',
                           textAlign: TextAlign.center,
                         ),
                         duration: Duration(seconds: 2),
