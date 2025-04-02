@@ -10,10 +10,11 @@ const uint8_t ACK = 0;
 const uint8_t SEND_GPS = 1;
 const uint8_t REQUEST_GPS = 2;
 const uint8_t MODE_TOGGLE = 3;
-const uint8_t SPEAKER_TOGGLE = 4;
-const uint8_t SEND_BATTERY = 5;
-const uint8_t REQUEST_BATTERY = 6;
-const uint8_t SLEEP = 7;
+const uint8_t SPEAKER_ON = 4;
+const uint8_t SPEAKER_OFF = 5;
+const uint8_t SEND_BATTERY = 6;
+const uint8_t REQUEST_BATTERY = 7;
+const uint8_t SLEEP = 8;
 
 // We need to provide the RFM95 module's chip select and interrupt pins to the 
 // rf95 instance below. On the SparkFun ProRF those pins are 12 and 6 respectively.
@@ -74,11 +75,16 @@ void handleSerialCommand(){
   SerialUSB.print("Serial Data Received: ");
   SerialUSB.println(serialCommand);
 
-  if (serialCommand == "buzzer"){
+  if (serialCommand == "buzzer_on"){
       message[0] = messageID;
-      message[1] = SPEAKER_TOGGLE; // buzzer
+      message[1] = SPEAKER_ON; // buzzer
       messageToSend = true;
-      SerialUSB.println("'Buzzer' message locked and loaded");
+      SerialUSB.println("'Buzzer on'  message locked and loaded");
+  else if (serialCommand == "buzzer_off"){
+        message[0] = messageID;
+        message[1] = SPEAKER_OFF; // buzzer
+        messageToSend = true;
+        SerialUSB.println("'Buzzer off'  message locked and loaded");
   } else if (serialCommand == "mode"){
       message[0] = messageID;
       message[1] = MODE_TOGGLE;

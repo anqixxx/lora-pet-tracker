@@ -15,10 +15,11 @@ ACK = 0
 SEND_GPS = 1
 REQUEST_GPS = 2
 MODE_TOGGLE = 3
-SPEAKER_TOGGLE = 4
-SEND_BATTERY = 5
-REQUEST_BATTERY = 6
-SLEEP = 7
+SPEAKER_ON = 4
+SPEAKER_OFF = 5
+SEND_BATTERY = 6
+REQUEST_BATTERY = 7
+SLEEP = 8
 
 # Database Mapping
 COMMAND_MAP = {
@@ -110,8 +111,12 @@ def main():
                         print(f"Sending {command['mode']} mode to LoRa server.") 
                         send_command("mode")
                 if not (command['buzzer'] is None):
-                    send_command("buzzer") # fix how this toggles, just push through if either is not null, need to also filter for unprocessed commands in the future
-                 
+                    # MAKE SURE TIME IS WITHIN 30 SECONDS FIRST
+                    if (command['buzzer']):
+                        send_command("buzzer_on") # fix how this toggles, just push through if either is not null, need to also filter for unprocessed commands in the future
+                    else:
+                        send_command("buzzer_off")
+                        
                 # After sending, mark this command as processed in Supabase
                 update = requests.patch(
                     f"{SUPABASE_URL}/rest/v1/device_commands?id=eq.{command_id}&apikey={SUPABASE_KEY}",
