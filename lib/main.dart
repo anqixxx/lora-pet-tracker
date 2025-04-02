@@ -9,9 +9,10 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Setup
-final Color defaultColor = Color.fromARGB(255, 229, 156, 150);
+final Color defaultColor = Color(0xFFFFDBD7); // Light pink color
 const int deviceId = 0; // 0 for actual, 1 for test, 2 for experimental
 final ValueNotifier<bool> isSleepMode = ValueNotifier(false);
+final ValueNotifier<DateTime?> lastSleepTime = ValueNotifier(null);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -147,22 +148,19 @@ class MyAppState extends ChangeNotifier {
       }
 
       // Find latest sleep mode time and latest non sleep mode time. If the former is most recent, we are in sleep mode and no GPS data is sent
-      final sleepEntries = data.where((entry) => entry['sleep'] == true && entry['timestamp'] != null);
+      final sleepEntries = data.where((entry) => entry['sleep'] != null && entry['timestamp'] != null);
       
       if (sleepEntries.isNotEmpty) {
         final latestSleepEntry = sleepEntries.reduce((a, b) => DateTime.parse(a['timestamp']).isAfter(DateTime.parse(b['timestamp'])) ? a : b);
-        
-        final sleepTimestamp = DateTime.parse(latestSleepEntry['timestamp']);
-        
-        final modeChangeAfterSleep = data.any((entry) => 
-          entry['mode'] != null && 
-          entry['timestamp'] != null &&
-          DateTime.parse(entry['timestamp']).isAfter(sleepTimestamp)
-        );
-        
-        isSleepMode.value = !modeChangeAfterSleep;
-        
+
+        isSleepMode.value = latestSleepEntry['sleep'];
+      
         print("Sleep Mode Status: ${isSleepMode.value}");
+
+        if (isSleepMode.value) {
+          final sleepTimestamp = DateTime.parse(latestSleepEntry['timestamp']).toUtc().subtract(Duration(hours: 8)); // in pst
+          lastSleepTime.value = sleepTimestamp;
+        }
       }
 
       notifyListeners();
@@ -532,52 +530,86 @@ class ModeSelectionWidgetState extends State<ModeSelectionWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ElevatedButton(
-          onPressed: normalmode
-              ? null // Disable button when Normal Mode is selected (normalmode is true)
-              : () {
-                  setState(() {
-                    normalmode = true; // Switch to Normal Mode
-                  });
-                  print("Normal Mode on");
-                print("normalmode is: $normalmode");
-                selectMode('n');
-
-                  // Normal Mode functionality here
-                },
-          style: ElevatedButton.styleFrom(
-            // backgroundColor: normalmode ? null: Colors.grey[300], // Set color
-            // foregroundColor: normalmode ? null: Colors.grey[500], // Set color
-            backgroundColor: normalmode ? null: null, // Set color
-            foregroundColor: normalmode ? null: null, // Set color            
-          ),
-          child: Text("Normal Mode"),
-        ),
-        SizedBox(width: 20),
-        ElevatedButton(
-          onPressed: !normalmode
-              ? null // Disable button when Search Mode is selected (normalmode is false)
-              : () {
-                  setState(() {
-                    normalmode = false; // Switch to Search Mode
-                  });
-                  print('Search mode on');
-                selectMode('s');
-                  // Search Mode functionality here
-                  
-                },
-          style: ElevatedButton.styleFrom(
-            // backgroundColor: !normalmode ?  null : Colors.grey[300], // Set color
-            // foregroundColor: !normalmode ?  null : Colors.grey[500], // Set color
-            backgroundColor: !normalmode ?  null : null, // Set color
-            foregroundColor: !normalmode ?  null : null, // Set color
-          ),
-          child: Text("Search Mode"),
-        ),
-      ],
+    return ValueListenableBuilder<bool>(
+      valueListenable: isSleepMode,
+      builder: (context, inSleepMode, child) {
+        return Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: inSleepMode 
+                      ? null // Disable when in sleep mode
+                      : (normalmode ? null : () {
+                          setState(() {
+                            normalmode = true;
+                          });
+                          print("Normal Mode on");
+                          print("normalmode is: $normalmode");
+                          selectMode('n');
+                        }),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: inSleepMode ? Colors.grey[300] : null,
+                    foregroundColor: inSleepMode ? Colors.grey[500] : null,
+                  ),
+                  child: Text("Normal Mode"),
+                ),
+                SizedBox(width: 20),
+                ElevatedButton(
+                  onPressed: inSleepMode
+                      ? null // Disable when in sleep mode
+                      : (!normalmode ? null : () {
+                          setState(() {
+                            normalmode = false;
+                          });
+                          print('Search mode on');
+                          selectMode('s');
+                        }),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: inSleepMode ? Colors.grey[300] : null,
+                    foregroundColor: inSleepMode ? Colors.grey[500] : null,
+                  ),
+                  child: Text("Search Mode"),
+                ),
+              ],
+            ),
+            if (inSleepMode)
+              Container(
+                margin: EdgeInsets.only(top: 8),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: defaultColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ValueListenableBuilder<DateTime?>(
+                  valueListenable: lastSleepTime,
+                  builder: (context, time, _) {
+                    final sleepTimeText = time != null 
+                      ? DateFormat('hh:mm a MMM dd').format(time)
+                      : "Unknown time";
+                    
+                    return Column(
+                      children: [
+                        Text(
+                          "Sleep Mode Active",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                        Text(
+                          "Sleep Detected From $sleepTimeText",
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+          ],
+        );
+      }
     );
   }
 
