@@ -26,10 +26,6 @@ COMMAND_MAP = {
     REQUEST_BATTERY: "battery",
 }
 
-
-def read_command(command):
-    command_id = command[0]
-
 def send_command(command):
         print(f"Sending command to LoRa server: {command}\n")
         server.write(f"{command}\n".encode('utf-8'))
@@ -57,10 +53,20 @@ def main():
             # message = server.read(server.in_waiting).decode('utf-8').strip()
             print(f"Received from LoRa server: {message}\n")
 
-            # Parse later, for now test
-            if ("Got message" in message):
-                data = {"test_message": message}
+            if ("GPS" in message):
+                _, _, gps = message.lstrip().partition(' ')
 
+                data = {"gps_latitude": gps[0:3], "gps_longitude": gps[4:]}
+
+            if ("BATTERY" in message):
+                _, _, level = message.lstrip().partition(' ')
+                data = {"battery": level}
+
+            if ("SLEEP" in message):
+                data = {"sleep": True}
+
+
+            if data:
                 print(f"Sending to Supabase\n")
 
                 response = requests.post(
@@ -97,14 +103,15 @@ def main():
                 command_id = command['id']
 
                 # Parse command, allow buzzer, update_battery, mode
-                if not (command['buzzer'] is None): send_command('b') # fix how this toggles, just push through if either is not null, need to also filter for unprocessed commands in the future
-                if command['battery']: send_command("l")
-                if command['gps']: send_command("g")
+                if command['battery']: send_command("battery")
+                if command['gps']: send_command("gps")
                 if command['mode']:
                     if mode !=  command['mode']:
                         print(f"Sending {command['mode']} mode to LoRa server.") 
-                        send_command("s")
-            
+                        send_command("mode")
+                if not (command['buzzer'] is None):
+                    send_command("buzzer") # fix how this toggles, just push through if either is not null, need to also filter for unprocessed commands in the future
+                 
                 # After sending, mark this command as processed in Supabase
                 update = requests.patch(
                     f"{SUPABASE_URL}/rest/v1/device_commands?id=eq.{command_id}&apikey={SUPABASE_KEY}",

@@ -5,6 +5,16 @@
 #include <SPI.h>
 #include <RH_RF95.h> //radio head library
 
+// Define our Message Types
+const uint8_t ACK = 0;
+const uint8_t SEND_GPS = 1;
+const uint8_t REQUEST_GPS = 2;
+const uint8_t MODE_TOGGLE = 3;
+const uint8_t SPEAKER_TOGGLE = 4;
+const uint8_t SEND_BATTERY = 5;
+const uint8_t REQUEST_BATTERY = 6;
+const uint8_t SLEEP = 7;
+
 // We need to provide the RFM95 module's chip select and interrupt pins to the 
 // rf95 instance below. On the SparkFun ProRF those pins are 12 and 6 respectively.
 RH_RF95 rf95(12, 6);
@@ -24,31 +34,65 @@ float frequency = 921.2; //americas
 
 volatile int messageID = 0;
 
+void sendSerialData(int message_type, uint8_t message){
+  if (message_type == SEND_GPS){ // Recieving 1 GPS Reading and 1 Battery Level
+    SerialUSB.print("SEND_GPS ");
+    for (int i = 9; i < 17; i++) // 9 to 16 inclusive is gps, 17 is battery
+    {
+      // 8 gps coordinates in total, first 4 are lattitude, last 4 are degrees
+      SerialUSB.print(message[i]);
+    }
+
+    SerialUSB.println();
+    SerialUSB.print("SEND_BATTERY ");
+    SerialUSB.print(message[17]);
+  }
+  else if (message_type == SEND_BATTERY){ // Recieving 1 Battery
+    SerialUSB.print("SEND_BATTERY ");
+    SerialUSB.print(message[17]);
+  }
+  else if (message_type == SLEEP){ Sleep Mode on
+    SerialUSB.print("SLEEP ");
+  }
+  else {
+    SerialUSB.print("Unidentified Message Type: ");
+
+    for (uint8_t x:buf){
+      SerialUSB.print(x);
+      SerialUSB.print(" ");
+    }
+  }
+
+  SerialUSB.println();
+  sendACK();
+}
 
 void handleSerialCommand(){
+  // we want to get all requests
   String serialCommand = SerialUSB.readStringUntil('\n'); // read input until newline
   serialCommand.trim();
   SerialUSB.print("Serial Data Received: ");
   SerialUSB.println(serialCommand);
-  if (serialCommand == "b"){
+
+  if (serialCommand == "buzzer"){
       message[0] = messageID;
-      message[1] = 0;
+      message[1] = SPEAKER_TOGGLE; // buzzer
       messageToSend = true;
-      SerialUSB.println("'buzzer' message locked and loaded");
-  } else if (serialCommand == "s"){
+      SerialUSB.println("'Buzzer' message locked and loaded");
+  } else if (serialCommand == "mode"){
       message[0] = messageID;
-      message[1] = 1;
+      message[1] = MODE_TOGGLE;
       messageToSend = true;
       SerialUSB.println("'search mode toggle' message locked and loaded");
-  } else if (serialCommand == "g"){
+  } else if (serialCommand == "gps"){
       message[0] = messageID;
-      message[1] = 2;
+      message[1] = REQUEST_GPS;
       messageToSend = true;
       SerialUSB.println("'gps request' message locked and loaded");
   }
-  else if (serialCommand == "l"){ // battery level request
+  else if (serialCommand == "battery"){ // battery level request
       message[0] = messageID;
-      message[1] = 3;
+      message[1] = REQUEST_BATTERY;
       messageToSend = true;
       SerialUSB.println("'battery request' message locked and loaded");
   }
@@ -120,10 +164,12 @@ void setup()
   rf95.setFrequency(frequency);
   rf95.setTxPower(14, false); 
 
-  SerialUSB.println("Type 's' to toggle search mode.");
-  SerialUSB.println("Type 'b' to toggle buzzer.");
-  SerialUSB.println("Type 'g' to get GPS data.");
-  SerialUSB.println("Type 'l' to get battery level.");
+  SerialUSB.println("Type 'mode' to toggle mode.");
+  SerialUSB.println("Type 'speaker' to toggle speaker.");
+  SerialUSB.println("Type 'gps' to get GPS data.");
+  SerialUSB.println("Type 'battery' to get battery level.");
+  SerialUSB.println("Type 'sleep' to test sleep mode.");
+
 }
 
 void loop()
@@ -135,27 +181,10 @@ void loop()
 
     if (rf95.recv(buf, &len)){
       digitalWrite(LED, HIGH); // Turn on status LED
-      timeSinceLastPacket = millis(); // Timestamp this packet
+      timeSinceLastPacket = millis(); // Timestamp this packet      
 
-      SerialUSB.print("Got message: ");
-      // SerialUSB.print((char*)buf);
-      if (buf[1] == 5){ // Recieving 1 GPS Reading
-        for (int i = 0; i < 18; i++)
-        {
-          SerialUSB.print(buf[i]);
-          SerialUSB.print(" ");
-        }
+      sendSerialData(buf[1], buf);
       }
-      else { // Control Sequence, TBI
-        for (uint8_t x:buf){
-          SerialUSB.print(x);
-          SerialUSB.print(" ");
-        }
-      }
-      SerialUSB.println();
-
-      sendACK();
-    }
     else
       SerialUSB.println("Recieve failed"); // Should we do something here if it doesn't work?
   }
