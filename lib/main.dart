@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:async';
 
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Setup
@@ -123,7 +124,7 @@ class MyAppState extends ChangeNotifier {
           .map((entry) => {
                 'lat': entry['gps_latitude'],
                 'long': entry['gps_longitude'],
-                'time': entry['timestamp']
+                'time': convertToLocalTime(entry['timestamp'])
               })
           .toList();
       // Filter out entries where battery_level or timestamp is null
@@ -131,10 +132,9 @@ class MyAppState extends ChangeNotifier {
           .where((entry) => entry['battery_level'] != null && entry['timestamp'] != null)
           .map((entry) => {
                 'battery': entry['battery_level'],
-                'time': entry['timestamp']
+                'time': convertToLocalTime(entry['timestamp'])
               })
           .toList();
-      print("Updated battery level list: $batteryLevelList");  // Debugging line
 
       final newLatestGpsData = gpsDataList.isNotEmpty ? gpsDataList.last : null;
       if (newLatestGpsData != latestGpsNotifier.value) {
@@ -147,6 +147,10 @@ class MyAppState extends ChangeNotifier {
         latestBatteryNotifier.value = newLatestBatteryData;
       }
 
+      print("Updated GPS Value: $newLatestGpsData");  // Debugging line
+
+      print("Updated Battery Level Value: $newLatestBatteryData");  // Debugging line
+
       // Find latest sleep mode time and latest non sleep mode time. If the former is most recent, we are in sleep mode and no GPS data is sent
       final sleepEntries = data.where((entry) => entry['sleep'] != null && entry['timestamp'] != null);
       
@@ -158,7 +162,7 @@ class MyAppState extends ChangeNotifier {
         print("Sleep Mode Status: ${isSleepMode.value}");
 
         if (isSleepMode.value) {
-          final sleepTimestamp = DateTime.parse(latestSleepEntry['timestamp']).toUtc().subtract(Duration(hours: 8)); // in pst
+          final sleepTimestamp = convertToLocalTime(latestSleepEntry['timestamp']);
           lastSleepTime.value = sleepTimestamp;
         }
       }
@@ -169,7 +173,7 @@ class MyAppState extends ChangeNotifier {
 
   Map<String, dynamic>? get latestGpsData {
       if (gpsDataList.isNotEmpty) {
-        print("Latest GPS Data: Latitude = ${gpsDataList.last['lat']}, Longitude = ${gpsDataList.last['long']}, Time = ${gpsDataList.last['time']}");
+        print("Latest GPS Data: Latitude = ${gpsDataList.last['lat']}, Longitude = ${gpsDataList.last['long']}, Time = $gpsDataList.last['time']");
         return gpsDataList.last;
       }
       return null;
@@ -188,7 +192,6 @@ class MyAppState extends ChangeNotifier {
 
     try {
       final response = await supabase.from('device_commands').insert({
-          'timestamp': DateTime.now().toUtc().toIso8601String(),
           'battery': true,
           'status': false,
           'device_id': deviceId,      
@@ -204,7 +207,6 @@ class MyAppState extends ChangeNotifier {
     print('Mode : $mode');
     try {
       final response = await supabase.from('device_commands').insert({
-        'timestamp': DateTime.now().toUtc().toIso8601String(), 
         'mode': mode,
       });
       if (response.error == null){
@@ -223,7 +225,6 @@ class MyAppState extends ChangeNotifier {
 
     try {
       final response = await supabase.from('device_commands').insert({
-          'timestamp': DateTime.now().toUtc().toIso8601String(),
           'gps': true,
           'status': false,
           'device_id': deviceId,      
@@ -355,7 +356,6 @@ class MainPageState extends State<MainPage> {
   void startSpeaker() async {
     try {
       final response = await supabase.from('device_commands').insert({
-        'timestamp': DateTime.now().toUtc().toIso8601String(),
         'buzzer': true,
         'status': false,
         'device_id': deviceId,
@@ -374,7 +374,6 @@ class MainPageState extends State<MainPage> {
   void stopSpeaker() async {
     try {
       final response = await supabase.from('device_commands').insert({
-        'timestamp': DateTime.now().toUtc().toIso8601String(),
         'buzzer': false,
         'status': false,
         'device_id': deviceId,
@@ -647,7 +646,7 @@ Widget historyMap() {
               final longitude = data['long'] as double?;
               return latitude != null && longitude != null;
             }).toList();
-            final markers = _buildMarkers(initialCenter, validGpsDataList);
+            final markers = _buildMarkers(initialCenter, validGpsDataList, context);
 
             return FlutterMap(
               options: MapOptions(
@@ -669,7 +668,7 @@ Widget historyMap() {
   );
 }
 
-List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsDataList) {
+List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsDataList, BuildContext context) {
   List<Marker> markers = [
     // Marker for the current location (red)
     Marker(
@@ -677,7 +676,22 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
       height: 80.0,
       point: initialCenter,
       alignment: Alignment.center,
-      child: Icon(Icons.location_on, color: Colors.black, size: 30),
+      child: GestureDetector(
+        onTap: () {
+          final formattedDate = DateFormat('hh:mm a MMM dd').format(DateTime.now());
+          final snackBar = SnackBar(
+            content: Text(
+              'Your Time $formattedDate',
+              textAlign: TextAlign.center,
+            ),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(top: 10, left: 20, right: 20),
+          );
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        },
+        child: Icon(Icons.location_on, color: Colors.black, size: 40),
+      ),
     ),
   ];
 
@@ -747,8 +761,7 @@ class MapWidget extends StatelessWidget {
                 final longitude = latestPosition['long'] as double;
                 final point = LatLng(latitude, longitude);
                 final time = latestPosition['time'];
-                DateTime formattedTime = DateTime.parse(time);
-                String formattedDate = DateFormat('hh:mm a MMM dd').format(formattedTime);
+                String formattedDate = DateFormat('hh:mm a MMM dd').format(time);
 
                 markers.add(
                   Marker(
@@ -758,7 +771,6 @@ class MapWidget extends StatelessWidget {
                   alignment: Alignment.center,
                   child: GestureDetector(
                     onTap: () {
-
                       final snackBar = SnackBar(
                         content: Text(
                           'GPS Time $formattedDate',
@@ -804,8 +816,7 @@ Widget battery(BuildContext context) {
       if (latestBattery != null && latestBattery.isNotEmpty) {
         final batteryPercent = latestBattery['battery'];
         final time = latestBattery['time'];
-        DateTime formattedTime = DateTime.parse(time);
-        String formattedDate = DateFormat('hh:mm a MMM dd').format(formattedTime);
+        String formattedDate = DateFormat('hh:mm a MMM dd').format(time);
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -968,4 +979,16 @@ class _SpeakerTimerWidgetState extends State<SpeakerTimerWidget> {
       ],
     );
   }
+}
+
+// Convert local time
+DateTime convertToLocalTime(String utcTimeString) {
+  final utcTime = DateTime.parse(utcTimeString);
+  return utcTime.toLocal();
+}
+
+// Format the local time into a readable string
+String formatLocalTime(String utcTimeString, {String format = 'hh:mm a MMM dd'}) {
+  final localTime = convertToLocalTime(utcTimeString);
+  return DateFormat(format).format(localTime);
 }
