@@ -392,63 +392,75 @@ class MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "🐈 🐈 🐈",
-          style: TextStyle(
-            fontFamily: 'font',
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-      ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Map Section
-            Expanded(
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: MapWidget(), // Use the new MapWidget here
-                  ),
-                  Positioned(
-                    bottom: 16,
-                    right: 16,
-                    child: FloatingActionButton(
-                      onPressed: () {
-                        final appState = Provider.of<MyAppState>(context, listen: false);
-                        appState.requestGPS();
-                      },
-                      mini: true,
-                      child: Icon(Icons.refresh),
-                    ),
-                  ),
-                ],
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+        SizedBox(height:15),
+
+        // Picture Section
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final catWidth = constraints.maxWidth * 0.12; 
+            return Container(
+              width: catWidth,
+              height: 50, 
+              decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          image: DecorationImage(
+            image: AssetImage('assets/images/cat.png'),
+            fit: BoxFit.cover,
+            onError: (exception, stackTrace) {
+              print('Error loading image: $exception');
+            },
+          ),
               ),
+            );
+          },
+        ),
+
+        // Map Section
+        Expanded(
+          child: Stack(
+          children: [
+            ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: MapWidget(), // Use the new MapWidget here
             ),
-            SizedBox(height: 20),
-
-            // Mode Selection Buttons
-            ModeSelectionWidget(),
-
-            SizedBox(height: 20),
-
-            // Battery Selection            
-            battery(context),
-
-            SizedBox(height: 20),
-            
-            // Speaker and Timer Section
-            SpeakerTimerWidget(
-              onStartSpeaker: startSpeaker,
-              onStopSpeaker: stopSpeaker,
+            Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton(
+              onPressed: () {
+              final appState = Provider.of<MyAppState>(context, listen: false);
+              appState.requestGPS();
+              },
+              mini: true,
+              child: Icon(Icons.refresh),
+            ),
             ),
           ],
+          ),
         ),
+        SizedBox(height: 20),
+
+        // Mode Selection Buttons
+        ModeSelectionWidget(),
+
+        SizedBox(height: 20),
+
+        // Battery Selection            
+        battery(context),
+
+        SizedBox(height: 20),
+        
+        // Speaker and Timer Section
+        SpeakerTimerWidget(
+          onStartSpeaker: startSpeaker,
+          onStopSpeaker: stopSpeaker,
+        ),
+        ],
+      ),
       ),
     );
   }
