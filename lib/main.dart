@@ -466,14 +466,117 @@ class MainPageState extends State<MainPage> {
   }
 }
 
-class HistoryPage extends StatelessWidget {
+class HistoryPage extends StatefulWidget {
+  @override
+  _HistoryPageState createState() => _HistoryPageState();
+}
+
+class _HistoryPageState extends State<HistoryPage> {
+  double _sliderValue = 0;
+
+  DateTime get timeFilter {
+    final now = DateTime.now();
+    if (_sliderValue == 0) return now.subtract(Duration(hours: 1));
+    if (_sliderValue == 1) return now.subtract(Duration(days: 1));
+    if (_sliderValue == 2) return now.subtract(Duration(days: 7));
+    if (_sliderValue == 3) return now.subtract(Duration(days: 30));
+    return DateTime.fromMillisecondsSinceEpoch(0); // All time (Unix epoch)
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: historyMap(),
+      body: Stack(
+        children: [
+          // Fullscreen Map
+          Positioned.fill(
+            child: historyMap(timeFilter),
+          ),
+
+          // Slider overlay at bottom
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 30,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              decoration: BoxDecoration(
+                color: defaultColor,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(color: defaultColor, blurRadius: 6),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Slider(
+                    inactiveColor: Colors.white,
+                    value: _sliderValue,
+                    min: 0,
+                    max: 4,
+                    divisions: 4,
+                    label: ["Last Hour", "Last Day", "Last Week", "Last Month", "All"][_sliderValue.toInt()],
+                    onChanged: (value) {
+                      setState(() {
+                        _sliderValue = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
 }
+
+Widget historyMap(DateTime timeFilter) {
+  return StreamBuilder<Position>(
+    stream: _getLocationStream(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return Center(child: CircularProgressIndicator());
+      } else if (snapshot.hasError) {
+        return Center(child: Text('Error: ${snapshot.error}'));
+      } else if (!snapshot.hasData || snapshot.data == null) {
+        return Center(child: Text('Location data is unavailable'));
+      } else {
+        final position = snapshot.data!;
+        final initialCenter = LatLng(position.latitude, position.longitude);
+
+        return Consumer<MyAppState>(
+          builder: (context, appState, child) {
+          final filteredData = appState.gpsDataList.where((data) {
+            final time = data['time'] as DateTime;
+            return time.isAfter(timeFilter);
+          }).toList();
+
+
+            final markers = _buildMarkers(initialCenter, filteredData, context);
+
+            return FlutterMap(
+              options: MapOptions(
+                initialCenter: initialCenter,
+                initialZoom: 13,
+                interactionOptions: const InteractionOptions(flags: ~InteractiveFlag.doubleTapZoom),
+              ),
+              children: [
+                openStreetMapTileLayer,
+                MarkerLayer(markers: markers),
+              ],
+            );
+          },
+        );
+      }
+    },
+  );
+}
+
 
 class BatteryIndicator extends StatelessWidget {
   final double batteryLevel; // Battery level as a decimal, e.g., 0.75 for 75%.
@@ -635,50 +738,50 @@ Stream<Position> _getLocationStream() {
   );
 }
 
-Widget historyMap() {
-  return StreamBuilder<Position>(
-    stream: _getLocationStream(), // Stream to get real-time location updates
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return Center(child: CircularProgressIndicator()); // Loading indicator
-      } else if (snapshot.hasError) {
-        return Center(child: Text('Error: ${snapshot.error}')); // Error handling
-      } else if (!snapshot.hasData || snapshot.data == null) {
-        return Center(child: Text('Location data is unavailable'));
-      } else {
-        final position = snapshot.data!;
-        final initialCenter = LatLng(position.latitude, position.longitude);
+// Widget historyMap() {
+//   return StreamBuilder<Position>(
+//     stream: _getLocationStream(), // Stream to get real-time location updates
+//     builder: (context, snapshot) {
+//       if (snapshot.connectionState == ConnectionState.waiting) {
+//         return Center(child: CircularProgressIndicator()); // Loading indicator
+//       } else if (snapshot.hasError) {
+//         return Center(child: Text('Error: ${snapshot.error}')); // Error handling
+//       } else if (!snapshot.hasData || snapshot.data == null) {
+//         return Center(child: Text('Location data is unavailable'));
+//       } else {
+//         final position = snapshot.data!;
+//         final initialCenter = LatLng(position.latitude, position.longitude);
 
-        return Consumer<MyAppState>(
-          builder: (context, appState, child) {
-              final gpsDataList = appState.gpsDataList;
-              // Filter out any GPS data that has null values for latitude or longitude
-              final validGpsDataList = gpsDataList.where((data) {
-              final latitude = data['lat'] as double?;
-              final longitude = data['long'] as double?;
-              return latitude != null && longitude != null;
-            }).toList();
-            final markers = _buildMarkers(initialCenter, validGpsDataList, context);
+//         return Consumer<MyAppState>(
+//           builder: (context, appState, child) {
+//               final gpsDataList = appState.gpsDataList;
+//               // Filter out any GPS data that has null values for latitude or longitude
+//               final validGpsDataList = gpsDataList.where((data) {
+//               final latitude = data['lat'] as double?;
+//               final longitude = data['long'] as double?;
+//               return latitude != null && longitude != null;
+//             }).toList();
+//             final markers = _buildMarkers(initialCenter, validGpsDataList, context);
 
-            return FlutterMap(
-              options: MapOptions(
-                initialCenter: initialCenter,
-                initialZoom: 13, // Set your preferred initial zoom level
-                interactionOptions: const InteractionOptions(flags: ~InteractiveFlag.doubleTapZoom),
-              ),
-              children: [
-                openStreetMapTileLayer,
-                MarkerLayer(
-                  markers: markers,
-                ),
-              ],
-            );
-          },
-        );
-      }
-    },
-  );
-}
+//             return FlutterMap(
+//               options: MapOptions(
+//                 initialCenter: initialCenter,
+//                 initialZoom: 13, // Set your preferred initial zoom level
+//                 interactionOptions: const InteractionOptions(flags: ~InteractiveFlag.doubleTapZoom),
+//               ),
+//               children: [
+//                 openStreetMapTileLayer,
+//                 MarkerLayer(
+//                   markers: markers,
+//                 ),
+//               ],
+//             );
+//           },
+//         );
+//       }
+//     },
+//   );
+// }
 
 List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsDataList, BuildContext context) {
   List<Marker> markers = [
@@ -714,7 +817,7 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
       final longitude = data['long'] as double;
       final point = LatLng(latitude, longitude);
       final time = data['time'];
-      final localTime = DateFormat('hh:mm a MMM dd').format(time);
+      String formattedDate = DateFormat('hh:mm a MMM dd yyyy').format(time);
 
       return Marker(
         width: 50.0,
@@ -725,7 +828,7 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
                 onTap: () {
                   final snackBar = SnackBar(
                     content: Text(
-                      'GPS Time $localTime',
+                      'GPS Time $formattedDate',
                       textAlign: TextAlign.center,
                     ),
                     duration: Duration(seconds: 2),
@@ -789,7 +892,7 @@ class MapWidget extends StatelessWidget {
                 final longitude = latestPosition['long'] as double;
                 final point = LatLng(latitude, longitude);
                 final time = latestPosition['time'];
-                String formattedDate = DateFormat('hh:mm a MMM dd').format(time);
+                String formattedDate = DateFormat('hh:mm a MMM dd yyyy').format(time);
 
                 markers.add(
                   Marker(
