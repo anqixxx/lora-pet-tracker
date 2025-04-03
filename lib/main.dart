@@ -194,14 +194,14 @@ class MyAppState extends ChangeNotifier {
     print("Requesting Battery Update");
 
     try {
-      final response = await supabase.from('device_commands').insert({
+      await supabase.from('device_commands').insert({
           'battery': true,
           'status': false,
           'device_id': deviceId,      
         });
-      print(response.error);
+        print("Battery Request Sent Successfully");
     } catch (e) {
-      print("Unexpected error sending battery request: $e");
+      print("Unexpected Error Sending Battery Request: $e");
     }
   }
 
@@ -209,17 +209,12 @@ class MyAppState extends ChangeNotifier {
   void selectMode(String mode) async {
     print('Mode : $mode');
     try {
-      final response = await supabase.from('device_commands').insert({
+      await supabase.from('device_commands').insert({
         'mode': mode,
       });
-      if (response.error == null){
-        print("Mode command sent to Supabase");
-      } else{
-        print("Error sending command to Supabase: ${response.error.message}");
-      }
-
+      print("Mode Command Sent to Supabase");
     } catch (e) {
-      print("Unexpected error sending mode command: $e");
+      print("Unexpected Error Sending Mode Command: $e");
     }
   }
 
@@ -227,14 +222,14 @@ class MyAppState extends ChangeNotifier {
     print("Requesting GPS Update");
 
     try {
-      final response = await supabase.from('device_commands').insert({
+      await supabase.from('device_commands').insert({
           'gps': true,
           'status': false,
           'device_id': deviceId,      
         });
-      print(response.error);
+      print('GPS Request Sent Sucessfully');
     } catch (e) {
-      print("Unexpected error sending gps request: $e");
+      print("Unexpected Error Sending GPS Request: $e");
     }
   }
 
@@ -358,37 +353,29 @@ class MainPageState extends State<MainPage> {
 
   void startSpeaker() async {
     try {
-      final response = await supabase.from('device_commands').insert({
+      await supabase.from('device_commands').insert({
         'buzzer': true,
         'status': false,
         'device_id': deviceId,
       });
 
-      if (response.error == null) {
-        print("Speaker command sent to Supabase");
-      } else {
-        print("Error sending command to Supabase: ${response.error.message}");
-      }
+      print("Speaker Command Sent Successfully");
+
     } catch (e) {
-      print("Unexpected error sending speaker command: $e");
+      print("Unexpected Error Sending Speaker Command: $e");
     }
   }
 
   void stopSpeaker() async {
     try {
-      final response = await supabase.from('device_commands').insert({
+      await supabase.from('device_commands').insert({
         'buzzer': false,
         'status': false,
         'device_id': deviceId,
       });
-
-      if (response.error == null) {
-        print("Stop speaker command sent to Supabase");
-      } else {
-        print("Error sending stop command to Supabase: ${response.error.message}");
-      }
+      print("Stop Speaker Command Successfully Sent");
     } catch (e) {
-      print("Unexpected error sending stop speaker command: $e");
+      print("Unexpected Error Sending Stop Speaker Command: $e");
     }
   }
 
@@ -913,7 +900,7 @@ Widget battery(BuildContext context) {
           mainAxisSize: MainAxisSize.min,
           children: [
             BatteryIndicator(batteryLevel: batteryPercent / 100),
-            SizedBox(width: 30),
+            SizedBox(width: 20),
             Column(
               children: [
                 Text("Last Checked"),
