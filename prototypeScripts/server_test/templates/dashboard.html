@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <title>Lora Data Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <meta http-equiv="refresh" content="5">
     <script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
 </head>
 <body>
-    <h1 style="text-align: center;"> 🐈 Lora Data Dashboard 🐈 </h1>
+    <h1 style="text-align: center;"> Lora Data Dashboard </h1>
 
     <form  style="text-align: center;" id="filterForm">
         <label for="mode">Enter Mode - <i>Test for Test and Exp for Experimental </i>:</label>

@@ -21,8 +21,7 @@ const uint8_t SLEEP = 8;
 RH_RF95 rf95(12, 6);
 bool messageToSend = false;
 uint8_t message[2];
-
-int LED = 13; //Status LED on pin 13
+int LED = 13; // Status LED on pin 13
 
 int packetCounter = 0; //Counts the number of packets sent
 long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
@@ -147,6 +146,8 @@ bool waitForACK() {
 
 void setup()
 {
+  rf95.setSpreadingFactor(9); // To match node
+
   pinMode(LED, OUTPUT);
 
   while(!SerialUSB);

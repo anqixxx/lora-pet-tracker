@@ -2,7 +2,7 @@ import serial
 import requests
 import time
 from datetime import datetime, timezone
-
+from dateutil.parser import isoparse
 
 # Supabase URL and API key
 SUPABASE_URL = "https://mgrgaxqqtvqttxvulbnk.supabase.co"
@@ -108,7 +108,7 @@ def main():
                         print(f"Sending {command['mode']} mode to LoRa server.") 
                         send_command("mode")
                 if not (command['buzzer'] is None):
-                    timestamp = datetime.fromisoformat(command['timestamp'])
+                    timestamp = isoparse(command['timestamp'])
                     now = datetime.now(timezone.utc)
 
                     if ( abs((now - timestamp).total_seconds()) <= 30):

@@ -5,12 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lora Data Dashboard</title>
     <meta http-equiv="refresh" content="5">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
 </head>
 <body>
-    <h1 style="text-align: center;"> 🐈 Lora Data Dashboard 🐈 </h1>
-
+    <div style="text-align: center;">
+        <img src="{{ url_for('static', filename='favicon.ico') }}" alt="Icon" style="height: 64px; margin-bottom: -25px;  margin-top: 20px;">
+        <h1>LoRa Data Dashboard</h1>
+      </div>
+      
     <form  style="text-align: center;" id="filterForm">
         <label for="mode">Enter Mode - <i>Test for Test and Exp for Experimental </i>:</label>
          <input type="text" id="mode" name="mode" value="{{ mode }}">
