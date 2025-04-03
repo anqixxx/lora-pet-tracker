@@ -738,51 +738,6 @@ Stream<Position> _getLocationStream() {
   );
 }
 
-// Widget historyMap() {
-//   return StreamBuilder<Position>(
-//     stream: _getLocationStream(), // Stream to get real-time location updates
-//     builder: (context, snapshot) {
-//       if (snapshot.connectionState == ConnectionState.waiting) {
-//         return Center(child: CircularProgressIndicator()); // Loading indicator
-//       } else if (snapshot.hasError) {
-//         return Center(child: Text('Error: ${snapshot.error}')); // Error handling
-//       } else if (!snapshot.hasData || snapshot.data == null) {
-//         return Center(child: Text('Location data is unavailable'));
-//       } else {
-//         final position = snapshot.data!;
-//         final initialCenter = LatLng(position.latitude, position.longitude);
-
-//         return Consumer<MyAppState>(
-//           builder: (context, appState, child) {
-//               final gpsDataList = appState.gpsDataList;
-//               // Filter out any GPS data that has null values for latitude or longitude
-//               final validGpsDataList = gpsDataList.where((data) {
-//               final latitude = data['lat'] as double?;
-//               final longitude = data['long'] as double?;
-//               return latitude != null && longitude != null;
-//             }).toList();
-//             final markers = _buildMarkers(initialCenter, validGpsDataList, context);
-
-//             return FlutterMap(
-//               options: MapOptions(
-//                 initialCenter: initialCenter,
-//                 initialZoom: 13, // Set your preferred initial zoom level
-//                 interactionOptions: const InteractionOptions(flags: ~InteractiveFlag.doubleTapZoom),
-//               ),
-//               children: [
-//                 openStreetMapTileLayer,
-//                 MarkerLayer(
-//                   markers: markers,
-//                 ),
-//               ],
-//             );
-//           },
-//         );
-//       }
-//     },
-//   );
-// }
-
 List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsDataList, BuildContext context) {
   List<Marker> markers = [
     // Marker for the current location (red)
@@ -793,10 +748,10 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
       alignment: Alignment.center,
       child: GestureDetector(
         onTap: () {
-          final formattedDate = DateFormat('hh:mm a MMM dd').format(DateTime.now());
+          final formattedDate = DateFormat('hh:mm a MMM dd yyyy').format(DateTime.now());
           final snackBar = SnackBar(
             content: Text(
-              'Your Time $formattedDate',
+              'Your Time: $formattedDate',
               textAlign: TextAlign.center,
             ),
             duration: Duration(seconds: 2),
@@ -828,7 +783,7 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
                 onTap: () {
                   final snackBar = SnackBar(
                     content: Text(
-                      'GPS Time $formattedDate',
+                      'GPS Time: $formattedDate',
                       textAlign: TextAlign.center,
                     ),
                     duration: Duration(seconds: 2),
@@ -846,34 +801,49 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
   return markers;
 }
 
-class MapWidget extends StatelessWidget {
+class MapWidget extends StatefulWidget {
+  @override
+  _MapWidgetState createState() => _MapWidgetState();
+}
+
+class _MapWidgetState extends State<MapWidget> {
+  late final MapController _mapController;
+
+  @override
+  void initState() {
+    super.initState();
+    _mapController = MapController(); // Initialize the MapController
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Position>(
-      future: _getCurrentLocation(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else {
-          final position = snapshot.data;
-          final initialCenter = LatLng(position!.latitude, position.longitude);
+    return ValueListenableBuilder<Map<String, dynamic>?>(
+      valueListenable: Provider.of<MyAppState>(context, listen: false).latestGpsNotifier,
+      builder: (context, latestPosition, child) {
+        return FutureBuilder<Position>(
+          future: _getCurrentLocation(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else {
+              // Use the latest GPS position if available, otherwise fallback to the current location
+              final initialCenter = latestPosition != null
+                  ? LatLng(latestPosition['lat'], latestPosition['long'])
+                  : LatLng(snapshot.data!.latitude, snapshot.data!.longitude);
 
-          return ValueListenableBuilder<Map<String, dynamic>?>(
-            valueListenable: Provider.of<MyAppState>(context, listen: false).latestGpsNotifier,
-            builder: (context, latestPosition, child) {
               List<Marker> markers = [
                 Marker(
                   width: 80.0,
                   height: 80.0,
-                  point: initialCenter,
+                  point: LatLng(snapshot.data!.latitude, snapshot.data!.longitude),
                   alignment: Alignment.topCenter,
                   child: GestureDetector(
                     onTap: () {
                       final snackBar = SnackBar(
                         content: Text(
-                          'Your Time ${DateFormat('hh:mm a MMM dd').format(DateTime.now())}',
+                          'Your Time: ${DateFormat('hh:mm a MMM dd yyyy').format(DateTime.now())}',
                           textAlign: TextAlign.center,
                         ),
                         duration: Duration(seconds: 2),
@@ -887,39 +857,38 @@ class MapWidget extends StatelessWidget {
                 ),
               ];
 
+              // Add a marker for the latest GPS position if it exists
               if (latestPosition != null) {
-                final latitude = latestPosition['lat'] as double;
-                final longitude = latestPosition['long'] as double;
-                final point = LatLng(latitude, longitude);
                 final time = latestPosition['time'];
                 String formattedDate = DateFormat('hh:mm a MMM dd yyyy').format(time);
 
                 markers.add(
                   Marker(
-                  width: 80.0,
-                  height: 80.0,
-                  point: point,
-                  alignment: Alignment.center,
-                  child: GestureDetector(
-                    onTap: () {
-                      final snackBar = SnackBar(
-                        content: Text(
-                          'GPS Time $formattedDate',
-                          textAlign: TextAlign.center,
-                        ),
-                        duration: Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                        margin: EdgeInsets.only(top: 10, left: 20, right: 20),
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                    },
-                    child: Icon(Icons.location_on, color: Colors.red, size: 40),
+                    width: 80.0,
+                    height: 80.0,
+                    point: LatLng(latestPosition['lat'], latestPosition['long']),
+                    alignment: Alignment.center,
+                    child: GestureDetector(
+                      onTap: () {
+                        final snackBar = SnackBar(
+                          content: Text(
+                            'Latest GPS Time: $formattedDate',
+                            textAlign: TextAlign.center,
+                          ),
+                          duration: Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                          margin: EdgeInsets.only(top: 10, left: 20, right: 20),
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                      },
+                      child: Icon(Icons.location_on, color: Colors.red, size: 40),
+                    ),
                   ),
-                ),
                 );
               }
 
               return FlutterMap(
+                mapController: _mapController, // Pass the MapController here
                 options: MapOptions(
                   initialCenter: initialCenter,
                   initialZoom: 13,
@@ -932,13 +901,108 @@ class MapWidget extends StatelessWidget {
                   ),
                 ],
               );
-            },
-          );
-        }
+            }
+          },
+        );
       },
     );
   }
 }
+
+// class MapWidget extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return ValueListenableBuilder<Map<String, dynamic>?>(
+//       valueListenable: Provider.of<MyAppState>(context, listen: false).latestGpsNotifier,
+//       builder: (context, latestPosition, child) {
+//         return FutureBuilder<Position>(
+//           future: _getCurrentLocation(),
+//           builder: (context, snapshot) {
+//             if (snapshot.connectionState == ConnectionState.waiting) {
+//               return Center(child: CircularProgressIndicator());
+//             } else if (snapshot.hasError) {
+//               return Center(child: Text('Error: ${snapshot.error}'));
+//             } else {
+//               // Use the latest GPS position if available, otherwise fallback to the current location
+//               final initialCenter = latestPosition != null
+//                   ? LatLng(latestPosition['lat'], latestPosition['long'])
+//                   : LatLng(snapshot.data!.latitude, snapshot.data!.longitude);
+//               final position = snapshot.data;
+
+//               List<Marker> markers = [
+//                 Marker(
+//                   width: 80.0,
+//                   height: 80.0,
+//                   point: LatLng(position!.latitude, position.longitude),
+//                   alignment: Alignment.topCenter,
+//                   child: GestureDetector(
+//                     onTap: () {
+//                       final snackBar = SnackBar(
+//                         content: Text(
+//                           'Your Time: ${DateFormat('hh:mm a MMM dd yyyy').format(DateTime.now())}',
+//                           textAlign: TextAlign.center,
+//                         ),
+//                         duration: Duration(seconds: 2),
+//                         behavior: SnackBarBehavior.floating,
+//                         margin: EdgeInsets.only(top: 10, left: 20, right: 20),
+//                       );
+//                       ScaffoldMessenger.of(context).showSnackBar(snackBar);
+//                     },
+//                     child: Icon(Icons.location_on, color: Colors.black, size: 40),
+//                   ),
+//                 ),
+//               ];
+
+//               // Add a marker for the latest GPS position if it exists
+//               if (latestPosition != null) {
+//                 final time = latestPosition['time'];
+//                 String formattedDate = DateFormat('hh:mm a MMM dd yyyy').format(time);
+
+//                 markers.add(
+//                   Marker(
+//                     width: 80.0,
+//                     height: 80.0,
+//                     point: LatLng(latestPosition['lat'], latestPosition['long']),
+//                     alignment: Alignment.center,
+//                     child: GestureDetector(
+//                       onTap: () {
+//                         final snackBar = SnackBar(
+//                           content: Text(
+//                             'Latest GPS Time: $formattedDate',
+//                             textAlign: TextAlign.center,
+//                           ),
+//                           duration: Duration(seconds: 2),
+//                           behavior: SnackBarBehavior.floating,
+//                           margin: EdgeInsets.only(top: 10, left: 20, right: 20),
+//                         );
+//                         ScaffoldMessenger.of(context).showSnackBar(snackBar);
+//                       },
+//                       child: Icon(Icons.location_on, color: Colors.red, size: 40),
+//                     ),
+//                   ),
+//                 );
+//               }
+
+//               return FlutterMap(
+//                 options: MapOptions(
+//                   initialCenter: initialCenter,
+//                   initialZoom: 13,
+//                   interactionOptions: const InteractionOptions(flags: ~InteractiveFlag.doubleTapZoom),
+//                 ),
+//                 children: [
+//                   openStreetMapTileLayer,
+//                   MarkerLayer(
+//                     markers: markers,
+//                   ),
+//                 ],
+//               );
+//             }
+//           },
+//         );
+//       },
+//     );
+//   }
+// }
 
 Widget battery(BuildContext context) {
   return ValueListenableBuilder<Map<String, dynamic>?>(
