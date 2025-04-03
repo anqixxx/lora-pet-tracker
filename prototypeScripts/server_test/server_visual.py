@@ -43,8 +43,8 @@ def filter_node(node_data):
         filtered_data = {'id': data['id'], 'timestamp': data['timestamp'], 'gps_latitude': data['gps_latitude'], 'gps_longitude': data['gps_longitude'], 'battery_level': data['battery_level'], 'msg': None}
         msg = str()
         
-        if data['test_message']:
-            msg += str(data['test_message']) + '\n'
+        # if data['test_message']:
+        #     msg += str(data['test_message']) + '\n'
         if data['sleep']:
             msg += 'Sleep mode turned on'
             
@@ -88,11 +88,13 @@ def filter(node_data, app_data):
             msg += 'GPS: ' + str(data['gps_latitude']) + ', ' + str(data['gps_longitude']) + ' | '
         if data['battery_level']:
             msg += 'Battery: ' + str(data['battery_level'])  + ' % | '
-        if data['test_message']:
-            msg += str(data['test_message']) + '\n'
+        # if data['test_message']:
+        #     msg += str(data['test_message']) + '\n'
         if data['sleep']:
             msg += 'Sleep mode turned on'
-            
+        else:
+            msg += 'Sleep mode off'
+
         filtered_data['msg'] = msg
         filtered.append(filtered_data)
     

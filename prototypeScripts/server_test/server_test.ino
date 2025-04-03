@@ -45,11 +45,12 @@ void sendSerialData(uint8_t message_type, uint8_t* message){
 
     SerialUSB.println();
     SerialUSB.print("SEND_BATTERY ");
-    SerialUSB.print(message[17]);
+    // SerialUSB.print(message[17]);
+    SerialUSB.print(56);
   }
   else if (message_type == SEND_BATTERY){ // Recieving 1 Battery
     SerialUSB.print("SEND_BATTERY ");
-    SerialUSB.print(message[17]);
+    SerialUSB.print(56);
   }
   else if (message_type == SLEEP){ // Sleep Mode on
     SerialUSB.print("SLEEP");
