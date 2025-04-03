@@ -99,12 +99,12 @@ class MyAppState extends ChangeNotifier {
   List<Map<String, dynamic>> gpsDataList = [];
   List<Map<String, dynamic>> batteryLevelList = [];
   List<Map<String, dynamic>> commands = [];
-  // Tuple of batteryLevel
+  
   final ValueNotifier<Map<String, dynamic>?> latestGpsNotifier = ValueNotifier(null);
   final ValueNotifier<Map<String, dynamic>?> latestBatteryNotifier = ValueNotifier(null);
 
   MyAppState() {
-    print("MyAppState initialized!");  // Debugging
+    print("MyAppState initialized!");  
     _startListeningForData();
   }
 
@@ -118,38 +118,41 @@ class MyAppState extends ChangeNotifier {
       // Filter out entries where any GPS value is null
       gpsDataList = data
           .where((entry) =>
-              entry['gps_latitude'] != null &&
-              entry['gps_longitude'] != null &&
-              entry['timestamp'] != null)
+          entry['gps_latitude'] != null &&
+          entry['gps_longitude'] != null &&
+          entry['timestamp'] != null)
           .map((entry) => {
-                'lat': entry['gps_latitude'],
-                'long': entry['gps_longitude'],
-                'time': convertToLocalTime(entry['timestamp'])
-              })
-          .toList();
+            'lat': entry['gps_latitude'],
+            'long': entry['gps_longitude'],
+            'time': convertToLocalTime(entry['timestamp'])
+          })
+          .toList()
+          ..sort((a, b) => b['time'].compareTo(a['time'])); // Sort by timestamp descending
+
       // Filter out entries where battery_level or timestamp is null
       batteryLevelList = data
           .where((entry) => entry['battery_level'] != null && entry['timestamp'] != null)
           .map((entry) => {
-                'battery': entry['battery_level'],
-                'time': convertToLocalTime(entry['timestamp'])
-              })
-          .toList();
+            'battery': entry['battery_level'],
+            'time': convertToLocalTime(entry['timestamp'])
+          })
+          .toList()
+          ..sort((a, b) => b['time'].compareTo(a['time'])); // Sort by timestamp descending
 
-      final newLatestGpsData = gpsDataList.isNotEmpty ? gpsDataList.last : null;
+      final newLatestGpsData = gpsDataList.isNotEmpty ? gpsDataList.first : null;
       if (newLatestGpsData != latestGpsNotifier.value) {
         latestGpsNotifier.value = newLatestGpsData;
       }
 
       // Update battery notifier when new data is available
-      final newLatestBatteryData = batteryLevelList.isNotEmpty ? batteryLevelList.last : null;
+      final newLatestBatteryData = batteryLevelList.isNotEmpty ? batteryLevelList.first : null;
       if (newLatestBatteryData != latestBatteryNotifier.value) {
         latestBatteryNotifier.value = newLatestBatteryData;
       }
 
-      print("Updated GPS Value: $newLatestGpsData");  // Debugging line
+      print("Updated GPS Value: $newLatestGpsData");  
 
-      print("Updated Battery Level Value: $newLatestBatteryData");  // Debugging line
+      print("Updated Battery Level Value: $newLatestBatteryData"); 
 
       // Find latest sleep mode time and latest non sleep mode time. If the former is most recent, we are in sleep mode and no GPS data is sent
       final sleepEntries = data.where((entry) => entry['sleep'] != null && entry['timestamp'] != null);
@@ -425,7 +428,7 @@ class MainPageState extends State<MainPage> {
           children: [
             ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: MapWidget(), // Use the new MapWidget here
+            child: MapWidget(), 
             ),
             Positioned(
             bottom: 16,
@@ -801,20 +804,7 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
   return markers;
 }
 
-class MapWidget extends StatefulWidget {
-  @override
-  _MapWidgetState createState() => _MapWidgetState();
-}
-
-class _MapWidgetState extends State<MapWidget> {
-  late final MapController _mapController;
-
-  @override
-  void initState() {
-    super.initState();
-    _mapController = MapController(); // Initialize the MapController
-  }
-
+class MapWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<Map<String, dynamic>?>(
@@ -832,12 +822,13 @@ class _MapWidgetState extends State<MapWidget> {
               final initialCenter = latestPosition != null
                   ? LatLng(latestPosition['lat'], latestPosition['long'])
                   : LatLng(snapshot.data!.latitude, snapshot.data!.longitude);
+              final position = snapshot.data;
 
               List<Marker> markers = [
                 Marker(
                   width: 80.0,
                   height: 80.0,
-                  point: LatLng(snapshot.data!.latitude, snapshot.data!.longitude),
+                  point: LatLng(position!.latitude, position.longitude),
                   alignment: Alignment.topCenter,
                   child: GestureDetector(
                     onTap: () {
@@ -888,7 +879,6 @@ class _MapWidgetState extends State<MapWidget> {
               }
 
               return FlutterMap(
-                mapController: _mapController, // Pass the MapController here
                 options: MapOptions(
                   initialCenter: initialCenter,
                   initialZoom: 13,
@@ -908,7 +898,6 @@ class _MapWidgetState extends State<MapWidget> {
     );
   }
 }
-
 
 Widget battery(BuildContext context) {
   return ValueListenableBuilder<Map<String, dynamic>?>(
@@ -1086,10 +1075,4 @@ class _SpeakerTimerWidgetState extends State<SpeakerTimerWidget> {
 DateTime convertToLocalTime(String utcTimeString) {
   final utcTime = DateTime.parse(utcTimeString);
   return utcTime.toLocal();
-}
-
-// Format the local time into a readable string
-String formatLocalTime(String utcTimeString, {String format = 'hh:mm a MMM dd'}) {
-  final localTime = convertToLocalTime(utcTimeString);
-  return DateFormat(format).format(localTime);
 }
