@@ -1,5 +1,6 @@
 import serial
 import requests
+import re
 import time
 from datetime import datetime, timezone
 from dateutil.parser import isoparse
@@ -46,19 +47,28 @@ def main():
         while server.in_waiting > 0:
             # Read data from base station
             print("Reading from LoRa server...")
-            data = None
+            data = {}
             message = server.readline().decode('utf-8').strip()
             # message = server.read(server.in_waiting).decode('utf-8').strip()
             print(f"Received from LoRa server: {message}\n")
 
             if ("GPS" in message):
-                _, _, gps = message.lstrip().partition(' ')
+                neg = -1
+                lat_str = message.split("SEND_GPS_LAT")[1].split("SEND_GPS_LONG")[0]
+                lon_str = message.split("SEND_GPS_LONG")[1]
 
-                data = {"gps_latitude": gps[0:3], "gps_longitude": gps[4:]}
+                # Remove any non-numeric characters (just in case)
+                lat_digits = ''.join(re.findall(r'\d+', lat_str))
+                lon_digits = ''.join(re.findall(r'\d+', lon_str))
 
-            if ("BATTERY" in message):
+                print(f"Latitude string: {lat_digits}")
+                print(f"Longitude string: {neg*lon_digits}")
+                data = {"gps_latitude": lat_digits, "gps_longitude": neg*lon_digits}
+            if ("SEND_BATTERY" in message):
                 _, _, level = message.lstrip().partition(' ')
-                data = {"battery": level}
+                print("Battery")
+                print(level)
+                data = {"battery_level": level}
 
             if ("SLEEP" in message):
                 data = {"sleep": True}

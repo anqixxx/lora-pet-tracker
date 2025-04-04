@@ -30,14 +30,25 @@ long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 // Europe operates in the frequencies 863-870, center frequency at 
 // 868MHz.This works but it is unknown how well the radio configures to this frequency:
 //float frequency = 864.1; //europe
-float frequency = 921.2; //americas
+float frequency = 912.5; //americas
 
 volatile int messageID = 0;
 
 void sendSerialData(uint8_t message_type, uint8_t* message){
   if (message_type == SEND_GPS){ // Recieving 1 GPS Reading and 1 Battery Level
-    SerialUSB.print("SEND_GPS ");
-    for (int i = 9; i < 17; i++) // 9 to 16 inclusive is gps, 17 is battery
+    SerialUSB.print("SEND_GPS_LAT ");
+    SerialUSB.print(message[9]);
+    SerialUSB.print('.');
+    for (int i = 10; i < 13; i++) // 9 to 16 inclusive is gps, 17 is battery
+    {
+      // 8 gps coordinates in total, first 4 are lattitude, last 4 are degrees
+      SerialUSB.print(message[i]);
+    }
+
+    SerialUSB.print("SEND_GPS_LONG ");
+    SerialUSB.print(message[13]);
+    SerialUSB.print('.');
+    for (int i = 14; i < 17; i++) // 9 to 16 inclusive is gps, 17 is battery
     {
       // 8 gps coordinates in total, first 4 are lattitude, last 4 are degrees
       SerialUSB.print(message[i]);
@@ -45,12 +56,11 @@ void sendSerialData(uint8_t message_type, uint8_t* message){
 
     SerialUSB.println();
     SerialUSB.print("SEND_BATTERY ");
-    // SerialUSB.print(message[17]);
-    SerialUSB.print(56);
+    SerialUSB.print(message[17]);
   }
-  else if (message_type == SEND_BATTERY){ // Recieving 1 Battery
+  else if (message_type == SEND_BATTERY){ // Rec  ieving 1 Battery
     SerialUSB.print("SEND_BATTERY ");
-    SerialUSB.print(56);
+    SerialUSB.print(message[1]); // Double check this
   }
   else if (message_type == SLEEP){ // Sleep Mode on
     SerialUSB.print("SLEEP");
@@ -110,7 +120,7 @@ void handleSerialCommand(){
 
 bool sendACK() {
   digitalWrite(LED, HIGH);
-  uint8_t toSend[] = {messageID, 4}; 
+  uint8_t toSend[] = {messageID, ACK}; 
   rf95.send(toSend, sizeof(toSend));
   rf95.waitPacketSent();
   SerialUSB.println("Sent ACK");
@@ -130,7 +140,7 @@ bool waitForACK() {
       SerialUSB.print("Got reply: ");
       SerialUSB.print(buf[0]);
       SerialUSB.println(buf[1]);
-      if (buf[1] == 4) {
+      if (buf[1] == ACK) {
         SerialUSB.println("Success: Got ACK");
         return true;
       }
