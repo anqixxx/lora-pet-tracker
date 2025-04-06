@@ -20,7 +20,7 @@ const uint8_t REQUEST_BATTERY = 7;
 const uint8_t SLEEP = 8;
 
 uint32_t timer = millis();
-int period = 30;  // seconds
+int period = 3600;  // seconds, made as 1 hour for adhoc
 
 // LoRa setup
 // We need to provide the RFM95 module's chip select and interrupt pins to the
