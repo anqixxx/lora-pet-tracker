@@ -9,6 +9,16 @@
 #include <Adafruit_I2CDevice.h>
 #include <LSM6DS.h>
 
+const uint8_t ACK = 0;
+const uint8_t SEND_GPS = 1;
+const uint8_t REQUEST_GPS = 2;
+const uint8_t MODE_TOGGLE = 3;
+const uint8_t SPEAKER_ON = 4;
+const uint8_t SPEAKER_OFF = 5;
+const uint8_t SEND_BATTERY = 6;
+const uint8_t REQUEST_BATTERY = 7;
+const uint8_t SLEEP = 8;
+
 uint32_t timer = millis();
 int period = 30;  // seconds
 
@@ -167,7 +177,7 @@ void parseMessage(int messageType) {
 
 bool sendACK() {
   digitalWrite(transmitting, HIGH);
-  uint8_t toSend[] = {messageID, 4}; 
+  uint8_t toSend[] = {messageID, ACK}; 
   rf95.send(toSend, sizeof(toSend));
   rf95.waitPacketSent();
   SerialUSB.println("Sent ACK");
@@ -187,7 +197,7 @@ bool waitForACK() {
       SerialUSB.print("Got reply: ");
       SerialUSB.print(buf[0]);
       SerialUSB.println(buf[1]);
-      if (buf[1] == 4) {
+      if (buf[1] == ACK) {
         SerialUSB.println("Success: Got ACK");
         return true;
       }
