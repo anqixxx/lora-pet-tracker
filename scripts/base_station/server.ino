@@ -157,7 +157,9 @@ bool waitForACK() {
 
 void setup()
 {
-  rf95.setSpreadingFactor(9); // To match node
+  // rf95.setSpreadingFactor(9); // To match node
+
+  rf95.setSpreadingFactor(12); // for testing
 
   pinMode(LED, OUTPUT);
 

@@ -26,6 +26,8 @@ int period = 3600;  // seconds, made as 1 hour for adhoc
 // We need to provide the RFM95 module's chip select and interrupt pins to the
 // rf95 instance below.On the SparkFun ProRF those pins are 12 and 6 respectively.
 RH_RF95 rf95(12, 6);
+rf95.setSpreadingFactor(12); // for testing
+
 int packetCounter = 0;         //Counts the number of packets sent
 long timeSinceLastPacket = 0;  //Tracks the time stamp of last packet received
 float frequency = 921.2;       //Broadcast frequency
