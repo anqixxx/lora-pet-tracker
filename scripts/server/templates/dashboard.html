@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <title>Lora Data Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <meta http-equiv="refresh" content="5">
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
+</head>
+<body>
+    <h1 style="text-align: center;"> Lora Data Dashboard </h1>
+
+    <form  style="text-align: center;" id="filterForm">
+        <label for="mode">Enter Mode - <i>Test for Test and Exp for Experimental </i>:</label>
+         <input type="text" id="mode" name="mode" value="{{ mode }}">
+    </form>
+
+    <div id="current-user-display" style="margin: 15px 0; font-weight: bold; text-align: center;">
+        {% if mode %}
+            Currently viewing data for mode: <span style="color: #2ecc71;">{{ mode }}</span>
+        {% else %}
+            No mode selected - showing all data
+        {% endif %}
+    </div>
+
+    <div id="hyperlink" style="margin: 15px 0; font-weight: bold; text-align: center;">
+        <p><a href="{{ url_for('merge') }}">For Combined Logging Please Click Here</a></p>
+
+    </div>
+
+    <h2 style="text-align: center;"> App Data 📱</h2>
+    <table id="command-table" border="1">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Command</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in app_data %}
+            <tr>
+                <td>{{ item.timestamp | datetime }}</td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.msg }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2 style="text-align: center;"> Node Data 📿 </h2>
+    <table id="status-table" border="1">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Battery %</th>
+                <th>GPS</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in node_data %}
+            <tr>
+                <td>{{ item.timestamp | datetime }}</td>
+                <td>{{ item.battery_level }}</td>
+                <td>{{ item.gps_latitude }}, {{ item.gps_longitude }}</td>
+                <td>{{ item.msg }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>
