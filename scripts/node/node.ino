@@ -26,7 +26,6 @@ int period = 3600;  // seconds, made as 1 hour for adhoc
 // We need to provide the RFM95 module's chip select and interrupt pins to the
 // rf95 instance below.On the SparkFun ProRF those pins are 12 and 6 respectively.
 RH_RF95 rf95(12, 6);
-rf95.setSpreadingFactor(12); // for testing
 
 int packetCounter = 0;         //Counts the number of packets sent
 long timeSinceLastPacket = 0;  //Tracks the time stamp of last packet received
@@ -38,7 +37,6 @@ volatile int messageID = 0;
 // GPS setup
 Adafruit_GPS GPS(&Wire);
 #define GPS_SLEEP_PIN 5
-#define GPS_MESSAGE_TYPE 5
 #define GPS_SIZE 16
 
 // IMU setup
@@ -128,7 +126,7 @@ void buzz() {
 bool sendSingleGPS(int timeout = 2000) {
   uint8_t message[18];
   message[0] = messageID;
-  message[1] = GPS_MESSAGE_TYPE;
+  message[1] = SEND_GPS;
   uint8_t dataGPS[GPS_SIZE];
   getGPS(dataGPS);
   memcpy(&message[2], dataGPS, GPS_SIZE);
@@ -257,6 +255,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(IMU_INT_PIN), handleActivityInterrupt, CHANGE);
 
   //LoRa setup
+  rf95.setSpreadingFactor(12); // for testing
   pinMode(transmitting, OUTPUT);
   if (rf95.init() == false) {
     SerialUSB.println("Radio Init Failed - Freezing");
