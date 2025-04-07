@@ -60,7 +60,7 @@ void sendSerialData(uint8_t message_type, uint8_t* message){
   }
   else if (message_type == SEND_BATTERY){ // Rec  ieving 1 Battery
     SerialUSB.print("SEND_BATTERY ");
-    SerialUSB.print(message[1]); // Double check this
+    SerialUSB.print(message[2]); // Double check this
   }
   else if (message_type == SLEEP){ // Sleep Mode on
     SerialUSB.print("SLEEP");

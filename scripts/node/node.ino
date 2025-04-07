@@ -43,7 +43,7 @@ Adafruit_GPS GPS(&Wire);
 LSM6DS sox;
 // Define the interrupt pin (connected to the IMU's interrupt pin)
 #define IMU_INT_PIN 4 // ? check pin
-// // Flag to indicate a wake event
+// // Flag to indicate a wake event ""
 volatile bool activityEventDetected = false;
 
 // Buzzer setup
@@ -123,6 +123,27 @@ void buzz() {
   delayMicroseconds(500);
 }
 
+bool sendSingleBattery(int timeout = 2000) {
+  uint8_t message[3];
+  message[0] = messageID;
+  message[1] = SEND_BATTERY;
+  message[2] = 52; // dummy value
+
+  rf95.send(message, 3);
+  rf95.waitPacketSent();
+  SerialUSB.print("Sent: ");
+  for (uint8_t x : message) {
+    SerialUSB.print(x);
+    SerialUSB.print(' ');
+  }
+  SerialUSB.println();
+  digitalWrite(transmitting, LOW);
+
+  messageID++;
+
+  return waitForACK();
+}
+
 bool sendSingleGPS(int timeout = 2000) {
   uint8_t message[18];
   message[0] = messageID;
@@ -147,31 +168,35 @@ bool sendSingleGPS(int timeout = 2000) {
 }
 
 void parseMessage(int messageType) {
-  switch (messageType) {
-    case 0:  // buzz
-      SerialUSB.println("Buzz");
-      buzzerToggle = !buzzerToggle;
-      break;
-    case 1:  // toggle frequency
-      SerialUSB.println("Toggle mode");
-      searchToggle = !searchToggle;
-      break;
-    case 2:  // send 1000 gps (1 for now)
-      SerialUSB.println("Send GPS");
-      // move this stuff to function so we don't have to repeat it
-      // delay(500);
-      bool sent = sendSingleGPS();
-      int i = 1;
-      while (!sent) {
-        SerialUSB.println("Retransmitting...");
-        SerialUSB.println(i);
-        sent = sendSingleGPS(i);
-        i++;
-      }
-      break;
-      // case 3: // change SF and BW
-
-      //   break;
+  if (messageType == SPEAKER_ON || messageType == SPEAKER_OFF){
+    SerialUSB.println("Buzz");
+    buzzerToggle = !buzzerToggle;
+  } else if (messageType == MODE_TOGGLE){
+    SerialUSB.println("Toggle mode");
+    searchToggle = !searchToggle;
+  } else if (messageType == REQUEST_GPS){
+    SerialUSB.println("Send GPS");
+    // move this stuff to function so we don't have to repeat it
+    // delay(500);
+    bool sent = sendSingleGPS();
+    int i = 1;
+    while (!sent) {
+      SerialUSB.println("Retransmitting...");
+      SerialUSB.println(i);
+      sent = sendSingleGPS(i);
+      i++;
+  }
+  }  else if (messageType == REQUEST_GPS){
+    SerialUSB.println("Send Battery");
+    // move this stuff to function so we don't have to repeat it
+    // delay(500);
+    bool sent = sendSingleBattery();
+    int i = 1;
+    while (!sent) {
+      SerialUSB.println("Retransmitting...");
+      SerialUSB.println(i);
+      sent = sendSingleBattery(i);
+      i++;
   }
 }
 
