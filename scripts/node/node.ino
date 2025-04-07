@@ -30,7 +30,7 @@ RH_RF95 rf95(12, 6);
 int packetCounter = 0;         //Counts the number of packets sent
 long timeSinceLastPacket = 0;  //Tracks the time stamp of last packet received
 float frequency = 912.5;       //Broadcast frequency
-int transmitting = 13;
+int TX_PIN = 13;
 
 volatile int messageID = 0;
 
@@ -137,7 +137,7 @@ bool sendSingleBattery(int timeout = 2000) {
     SerialUSB.print(' ');
   }
   SerialUSB.println();
-  digitalWrite(transmitting, LOW);
+  digitalWrite(TX_PIN, LOW);
 
   messageID++;
 
@@ -151,7 +151,7 @@ bool sendSingleGPS(int timeout = 2000) {
   uint8_t dataGPS[GPS_SIZE];
   getGPS(dataGPS);
   memcpy(&message[2], dataGPS, GPS_SIZE);
-  digitalWrite(transmitting, HIGH);
+  digitalWrite(TX_PIN, HIGH);
   rf95.send(message, 18);
   rf95.waitPacketSent();
   SerialUSB.print("Sent: ");
@@ -160,7 +160,7 @@ bool sendSingleGPS(int timeout = 2000) {
     SerialUSB.print(' ');
   }
   SerialUSB.println();
-  digitalWrite(transmitting, LOW);
+  digitalWrite(TX_PIN, LOW);
 
   messageID++;
 
@@ -186,7 +186,7 @@ void parseMessage(int messageType) {
       sent = sendSingleGPS(i);
       i++;
   }
-  }  else if (messageType == REQUEST_GPS){
+  }  else if (messageType == REQUEST_BATTERY){
     SerialUSB.println("Send Battery");
     // move this stuff to function so we don't have to repeat it
     // delay(500);
@@ -202,12 +202,12 @@ void parseMessage(int messageType) {
 }
 
 bool sendACK() {
-  digitalWrite(transmitting, HIGH);
+  digitalWrite(TX_PIN, HIGH);
   uint8_t toSend[] = {messageID, ACK}; 
   rf95.send(toSend, sizeof(toSend));
   rf95.waitPacketSent();
   SerialUSB.println("Sent ACK");
-  digitalWrite(transmitting, LOW);
+  digitalWrite(TX_PIN, LOW);
 
   messageID++;
 
@@ -282,16 +282,16 @@ void setup() {
 
   //LoRa setup
   rf95.setSpreadingFactor(12); // for testing
-  pinMode(transmitting, OUTPUT);
+  pinMode(TX_PIN, OUTPUT);
   if (rf95.init() == false) {
     SerialUSB.println("Radio Init Failed - Freezing");
     while (1);
   } else {
     //An LED inidicator to let us know radio initialization has completed.
     SerialUSB.println("Transmitter up!");
-    digitalWrite(transmitting, HIGH);
+    digitalWrite(TX_PIN, HIGH);
     delay(500);
-    digitalWrite(transmitting, LOW);
+    digitalWrite(TX_PIN, LOW);
     delay(500);
   }
 

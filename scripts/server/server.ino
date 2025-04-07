@@ -183,7 +183,7 @@ void setup()
   }
 
   rf95.setFrequency(frequency);
-  rf95.setTxPower(14, false); 
+  rf95.setTxPower(22, false); 
 
   SerialUSB.println("Type 'mode' to toggle mode.");
   SerialUSB.println("Type 'speaker' to toggle speaker.");
