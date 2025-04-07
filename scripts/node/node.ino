@@ -29,7 +29,7 @@ RH_RF95 rf95(12, 6);
 
 int packetCounter = 0;         //Counts the number of packets sent
 long timeSinceLastPacket = 0;  //Tracks the time stamp of last packet received
-float frequency = 921.2;       //Broadcast frequency
+float frequency = 912.5;       //Broadcast frequency
 int transmitting = 13;
 
 volatile int messageID = 0;
