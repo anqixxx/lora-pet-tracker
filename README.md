@@ -129,7 +129,7 @@ A quick summary of the necessary steps:
         mkdir nominatim-project
         cd nominatim-project
         ../nominatim-venv/bin/nominatim import --osm-file <your planet file>
-        <!-- Alternative command with logging: ../nominatim-venv/bin/nominatim import --osm-file <your planet file> 2>&1 | tee setup.log -->
+        % alternative command with logging: ../nominatim-venv/bin/nominatim import --osm-file <your planet file> 2>&1 | tee setup.log -->
 
 
 3. Start the webserver:
