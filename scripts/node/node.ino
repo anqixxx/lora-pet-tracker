@@ -198,6 +198,7 @@ void parseMessage(int messageType) {
       sent = sendSingleBattery(i);
       i++;
   }
+  }
 }
 
 bool sendACK() {
