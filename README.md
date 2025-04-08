@@ -26,7 +26,7 @@ Before running the app, ensure you have the following:
 
 ---
 
-## Usage 🛠
+## Usage 
 
 ### Home Screen
 - **Map**: Displays your pet's current location and the latest GPS data.
