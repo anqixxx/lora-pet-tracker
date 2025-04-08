@@ -4,7 +4,7 @@ The **LoRa Pet Tracker** is a Flutter-based mobile application designed to help 
 
 ---
 
-## Features ✨
+## Features 
 
 - **Real-time GPS Tracking**: View your pet's location on an interactive map.
 - **Battery Level Monitoring**: Check the battery status of the pet tracker device.
@@ -14,7 +14,7 @@ The **LoRa Pet Tracker** is a Flutter-based mobile application designed to help 
 
 ---
 
-## Getting Started 🚀
+## Getting Started 
 
 ### Prerequisites
 
@@ -26,7 +26,7 @@ Before running the app, ensure you have the following:
 
 ---
 
-## Usage 🛠️
+## Usage 🛠
 
 ### Home Screen
 - **Map**: Displays your pet's current location and the latest GPS data.
@@ -39,7 +39,7 @@ Before running the app, ensure you have the following:
 
 ---
 
-## Code Structure 🧩
+## Code Structure 
 
 - **`main.dart`**: Entry point of the app. Initializes Supabase and sets up the app state.
 - **`MyAppState`**: Manages the app's state, including GPS data, battery levels, and device commands.
@@ -51,7 +51,7 @@ Before running the app, ensure you have the following:
 
 ---
 
-## Dependencies 📦
+## Dependencies 
 
 The app uses the following Flutter packages:
 
