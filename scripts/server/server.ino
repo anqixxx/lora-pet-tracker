@@ -23,6 +23,10 @@ bool messageToSend = false;
 uint8_t message[2];
 int LED = 13; // Status LED on pin 13
 
+
+// random backoff
+static bool retrying = false;
+
 int packetCounter = 0; //Counts the number of packets sent
 long timeSinceLastPacket = 0; //Tracks the time stamp of last packet received
 // The broadcast frequency is set to 921.2, but the SADM21 ProRf operates
@@ -209,19 +213,59 @@ void loop()
     else
       SerialUSB.println("Recieve failed"); // Should we do something here if it doesn't work?
   }
+
   //Turn off status LED if we haven't received a packet after 1s
-  if(millis() - timeSinceLastPacket > 1000){
+  if( millis() - timeSinceLastPacket > 1000){
     digitalWrite(LED, LOW); //Turn off status LED
     timeSinceLastPacket = millis(); //Don't write LED but every 1s
   }
 
-  if (messageToSend){
+  if (messageToSend && !retrying){ // if there is a message to send and we are not retrying, i.e. this is a fresh message
     SerialUSB.println("sending message.....");
     rf95.send(message, sizeof(message));
     rf95.waitPacketSent();
 
-    messageToSend = !waitForACK();
-    messageID++;
+    if (!waitForACK()){
+      // ack wasnt recieved
+      SerialUSB.println("No ACK received, entering retry mode");
+      retrying = true; // set retry
+    } else {
+      SerialUSB.println("Message sent successfully!");
+      messageID++; // increment the message ID
+      messageToSend = false; // clear the message flag in case we get a new one
+    }
+  }
+
+  while (retrying){ // random backoff
+    static unsigned long backoff = random(2000, 5000); // random backoff between 2-5 seconds
+    uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+    uint8_t len = sizeof(buf);
+  
+    SerialUSB.print("No ACK received, entering retry mode... for ");
+    SerialUSB.print(float(backoff) / 1000.0);
+    SerialUSB.println(" seconds");
+
+    if (rf95.waitAvailableTimeout(backoff)) {
+      if (rf95.recv(buf, &len)) {
+        sendSerialData(buf[1] , buf);
+      }
+    }
+    
+    // resend the last message
+    rf95.send(message, sizeof(message));
+    rf95.waitPacketSent();
+
+
+    // check for ACK again
+    if (!waitForACK()) {
+      SerialUSB.println("Retry failed, will retry again...");
+    } else {
+      SerialUSB.println("Retry successful!");
+      retrying = false; // exit retry mode
+      messageToSend = false; // clear the message flag
+      messageID++; // increment the message ID
+    }
+
   }
 
   if (SerialUSB.available() > 0) {

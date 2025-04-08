@@ -10,7 +10,7 @@ SUPABASE_URL = "https://mgrgaxqqtvqttxvulbnk.supabase.co"
 SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ncmdheHFxdHZxdHR4dnVsYm5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc0MDUyMDgsImV4cCI6MjA1Mjk4MTIwOH0.A3VybPyJGZ3Bm2rfe1BMZLM_51eVKFmW0uEGSi6qZhI'
 
 # Serial port and baud rate
-PORT = '/dev/tty.usbmodem1101'  
+PORT = '/dev/tty.usbmodem101'  
 BAUD_RATE = 115200          
 
 # Message Types
