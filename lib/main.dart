@@ -542,10 +542,16 @@ Widget historyMap(DateTime timeFilter) {
         return Consumer<MyAppState>(
           builder: (context, appState, child) {
           final filteredData = appState.gpsDataList.where((data) {
-            final time = data['time'] as DateTime;
+            final rawTime = data['time'];
+
+            final DateTime? time = rawTime is DateTime
+                ? rawTime
+                : (rawTime is String ? DateTime.tryParse(rawTime) : null);
+
+            if (time == null) return false;
+
             return time.isAfter(timeFilter);
           }).toList();
-
 
             final markers = _buildMarkers(initialCenter, filteredData, context);
 
@@ -755,11 +761,11 @@ List<Marker> _buildMarkers(LatLng initialCenter, List<Map<String, dynamic>> gpsD
     ),
   ];
 
-  // Add markers for each valid GPS data point (black)
+  // add markers for each valid GPS data point (marked as red))
   if (gpsDataList.isNotEmpty) {
     markers.addAll(gpsDataList.map((data) {
-      final latitude = data['lat'] as double;
-      final longitude = data['long'] as double;
+      final latitude = (data['lat'] as num).toDouble();
+      final longitude = (data['long'] as num).toDouble();
       final point = LatLng(latitude, longitude);
       final time = data['time'];
       String formattedDate = DateFormat('hh:mm a MMM dd yyyy').format(time);
