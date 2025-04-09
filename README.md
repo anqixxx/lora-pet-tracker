@@ -53,11 +53,10 @@ A Flutter-based mobile application to view location, battery, and command the no
 
 <div align="center">
   <figure>
-    <img src="app/assets/readme/phoneusage.gif" width="300" style="border-radius:12px;">
+    <img src="pp/assets/readme/demo.gif" width="300" style="border-radius:12px;">
   </figure>
 </div>
 </br>
-
 This includes the following features:
 
 - Real-time location & battery updates
@@ -120,7 +119,7 @@ Demo Screenshots
   <img src="app/assets/readme/history.png" width="45%" style="border-radius: 12px;">
 </p> -->
 
-![Pet History and Main Page](node/assets/readme/main.png)
+![Pet History and Main Page](app/assets/readme/main.png)
 
 
 Questions and help
