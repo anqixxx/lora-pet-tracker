@@ -37,4 +37,4 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/cat.png" a 
+  image_path: "assets/images/cat.png" 
