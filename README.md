@@ -112,8 +112,10 @@ Below are the example tables for device status and device commands.
 </div>
 
 
-Demo Screenshots
+Demo App Screenshots
 =========
+Below are the images for the homepage and history page for the LoRa App
+
 <!-- <p align="center">
   <img src="app/assets/readme/homepage.png" width="45%" style="border-radius: 12px; margin-right: 10px;">
   <img src="app/assets/readme/history.png" width="45%" style="border-radius: 12px;">
