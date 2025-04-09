@@ -6,6 +6,9 @@ This repository contains the firmware and setup for the LoRa base station compon
 Features
 =========
 
+![Base Station Overview](images/basestation.png)
+
+
 The base station performs the following key functions:
 
 - Listens for uplink LoRa messages from pet nodes.
