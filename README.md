@@ -53,7 +53,7 @@ A Flutter-based mobile application to view location, battery, and command the no
 
 <div align="center">
   <figure>
-    <img src="pp/assets/readme/demo.gif" width="300" style="border-radius:12px;">
+    <img src="app/assets/readme/demo.gif" width="300" style="border-radius:12px;">
   </figure>
 </div>
 </br>
