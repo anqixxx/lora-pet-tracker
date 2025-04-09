@@ -95,7 +95,7 @@ Below are the example tables for device status and device commands.
 | device_id        | int       | 0 (real), 1 (test), etc.      |
 
 </div>
-
+</br>
 <div align="center">
 
 | Column      | Type        | Description                                 |
@@ -111,7 +111,6 @@ Below are the example tables for device status and device commands.
 
 </div>
 
----
 
 Demo Screenshots
 =========
