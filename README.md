@@ -120,7 +120,7 @@ Demo Screenshots
   <img src="app/assets/readme/history.png" width="45%" style="border-radius: 12px;">
 </p> -->
 
-![Pet History and Main Page](node/images/main.png)
+![Pet History and Main Page](node/assets/readme/main.png)
 
 
 Questions and help
