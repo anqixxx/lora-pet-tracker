@@ -53,7 +53,7 @@ int buzzLength = 800;
 // toggles (should write these states to memory in case node turns off/gets disconnected (same on base side))
 bool buzzerToggle = false;
 bool searchToggle = false;
-
+bool sleep = false;
 
 void pollIMU(int dataIMU[3][3]) {
   sensors_event_t accel;
@@ -127,7 +127,7 @@ bool sendSingleBattery(int timeout = 2000) {
   uint8_t message[3];
   message[0] = messageID;
   message[1] = SEND_BATTERY;
-  message[2] = 52; // dummy value
+  message[2] = 52; // dummy value for now
 
   rf95.send(message, 3);
   rf95.waitPacketSent();
@@ -153,6 +153,28 @@ bool sendSingleGPS(int timeout = 2000) {
   memcpy(&message[2], dataGPS, GPS_SIZE);
   digitalWrite(TX_PIN, HIGH);
   rf95.send(message, 18);
+  rf95.waitPacketSent();
+  SerialUSB.print("Sent: ");
+  for (uint8_t x : message) {
+    SerialUSB.print(x);
+    SerialUSB.print(' ');
+  }
+  SerialUSB.println();
+  digitalWrite(TX_PIN, LOW);
+
+  messageID++;
+
+  return waitForACK();
+}
+
+bool sendSleep(int timeout = 2000) {
+  uint8_t message[2];
+  message[0] = messageID;
+  message[1] = SLEEP;
+  message[2] = sleep ? 1 : 0; // convert bool to uint8_t
+
+  digitalWrite(TX_PIN, HIGH);
+  rf95.send(message, 2);
   rf95.waitPacketSent();
   SerialUSB.print("Sent: ");
   for (uint8_t x : message) {
@@ -303,9 +325,16 @@ void setup() {
 
 
 void loop() {
-  // Verify the activity status using the 'activityStatus()` function, can also read pin
+  // Verify the activity status using the 'activityStatus()` function, can also read pin  
   if (!sox.activityStatus()){ // if active
     if (millis() - timer > ((period - 20 * searchToggle) * 1000)) {
+      // Set Tx Power based on mode
+      if (searchToggle) {
+        rf95.setTxPower(22, false); // max power during search mode
+      } else {
+        rf95.setTxPower(14, false); // normal power
+      }
+      
       timer = millis();  // reset the timer
 
       bool sent = sendSingleGPS();
@@ -316,9 +345,12 @@ void loop() {
         sent = sendSingleGPS(i);
         i++;
       }
+
+      sendSleep();
     }
   } else {
-    // SerialUSB.println("Sleeping...");
+    SerialUSB.println("Sleeping...");
+    sendSleep();
   }
 
   if (rf95.available()) {
