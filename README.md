@@ -85,6 +85,10 @@ Below is the node-side logic flowchart for LoRa GPS transmission. The node perio
 PostgreSQL Table Snapshot
 =========
 
+Below are the example tables for device status and device commands.
+
+<div align="center">
+
 | Column           | Type      | Description                   |
 |------------------|-----------|-------------------------------|
 | gps_latitude     | float     | Latitude in degrees           |
@@ -93,6 +97,23 @@ PostgreSQL Table Snapshot
 | sleep            | boolean   | True if pet is asleep         |
 | timestamp        | datetime  | When data was recorded        |
 | device_id        | int       | 0 (real), 1 (test), etc.      |
+
+</div>
+
+<div align="center">
+
+| Column      | Type        | Description                                 |
+|-------------|-------------|---------------------------------------------|
+| id          | uuid        | Unique identifier for each command          |
+| device_id   | text        | ID of the device receiving the command      |
+| status      | bool        | Whether the command has been acknowledged   |
+| buzzer      | bool        | Activate (true) or deactivate (false) buzzer |
+| mode        | text        | Set mode: e.g., `"n"` for normal, `"s"` for search |
+| battery     | bool        | Request battery level if true               |
+| timestamp   | timestamptz | When the command was sent                   |
+| gps         | bool        | Request GPS data if true                    |
+
+</div>
 
 ---
 
