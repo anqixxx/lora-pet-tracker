@@ -6,7 +6,7 @@ This repository contains the firmware and setup for the LoRa base station compon
 Features
 =========
 
-![Base Station Overview](images/dashbasboard.png)
+![Base Station Overview](images/basestation.png)
 
 
 The base station performs the following key functions:
