@@ -18,7 +18,7 @@ Visual Dashboard
 
 The base station is integrated with a Flask visual dashboard, allowing you to see in real time how the Node, Base, and App Communicate
 
-![Dashboard Overview](images/homepage.png)
+![Dashboard Overview](images/dashboard.png)
 
 Initalization
 =========
