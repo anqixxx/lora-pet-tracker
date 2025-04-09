@@ -31,7 +31,7 @@ This firmware runs on a GPS + IMU + LoRa-equipped microcontroller worn by the pe
 
 ![Pet Node Hardware](node/images/collar.png)
 
-For more detailed information, check out the seperate README in the /node folder
+For more detailed information, check out the seperate [README](node/README.md) in the /node folder
 
 Base Station (`base/`)
 =========
@@ -40,7 +40,7 @@ The base station receives LoRa packets and relays them to Supabase (PostgreSQL b
 
 ![Base Station](base/images/basestation.png)
 
-This includes the following features. For more detailed information, check out the seperate README in the /base folder
+This includes the following features. For more detailed information, check out the [Base Station README](base/README.md) in the /base folder
 - LoRa reception & decoding
 - Command transmission to node
 - Real-time dashboard (optional)
@@ -48,7 +48,8 @@ This includes the following features. For more detailed information, check out t
 
 Mobile App (`app/`)
 =========
-A Flutter-based mobile application to view location, battery, and command the node remotely. It is accessible both on iOS and Android.
+A Flutter-based mobile application to view location, battery, and command the node remotely. It is accessible both on iOS and Android. FOr installation information and more within the [App README](app/README.md)
+
 
 <div align="center">
   <figure>
