@@ -46,17 +46,13 @@ This includes the following features. For more detailed information, check out t
 - Real-time dashboard (optional)
 - Supabase integration for cloud logging
 
-Optionally, it can visualize activity via a Python dashboard, as shown below.
-![Base Station](base/images/dashboard.png)
-
-
 Mobile App (`app/`)
 =========
 A Flutter-based mobile application to view location, battery, and command the node remotely. It is accessible both on iOS and Android.
 
 <div align="center">
   <figure>
-    <img src="assets/readme/phoneusage.gif" width="300" style="border-radius:12px;">
+    <img src="app/assets/readme/phoneusage.gif" width="300" style="border-radius:12px;">
   </figure>
 </div>
 </br>
