@@ -36,11 +36,9 @@ For more detailed information, check out the seperate README in the /node folder
 Base Station (`base/`)
 =========
 
-The base station receives LoRa packets and relays them to Supabase (PostgreSQL backend). Optionally, it can visualize activity via a Python dashboard.
+The base station receives LoRa packets and relays them to Supabase (PostgreSQL backend).
 
 ![Base Station](base/images/basestation.png)
-
-![Base Station](base/images/dashboard.png)
 
 This includes the following features. For more detailed information, check out the seperate README in the /base folder
 - LoRa reception & decoding
@@ -48,12 +46,21 @@ This includes the following features. For more detailed information, check out t
 - Real-time dashboard (optional)
 - Supabase integration for cloud logging
 
+Optionally, it can visualize activity via a Python dashboard, as shown below.
+![Base Station](base/images/dashboard.png)
+
 
 Mobile App (`app/`)
 =========
 A Flutter-based mobile dashboard to view location, battery, and command the node remotely.
 
-![App Demo](app/assets/readme/phoneusage.gif)
+<div align="center">
+  <figure>
+    <img src="assets/readme/phoneusage.gif" width="300" style="border-radius:12px;">
+  </figure>
+</div>
+</br>
+
 
 This includes the following features.
 
@@ -67,15 +74,14 @@ This includes the following features.
 Data Flow Overview
 =========
 ![Diagram](images/diagram.png)
-![Comunication](images/communication.png)
 
-```mermaid
-graph LR
-A[Pet Node] -- LoRa --> B[Base Station]
-B -- UART/I2C --> C[Python Script]
-C -- REST --> D[Supabase (PostgreSQL)]
-D --> E[Flutter App]
-```
+<div align="center">
+  <figure>
+    <img src="images/communication.png" width="300" style="border-radius:12px;">
+  </figure>
+</div>
+</br>
+
 
 PostgreSQL Table Snapshot
 =========
@@ -94,6 +100,6 @@ PostgreSQL Table Snapshot
 Demo Screenshots
 =========
 <p align="center">
-  <img src="assets/readme/homepage.png" width="45%" style="border-radius: 12px; margin-right: 10px;">
-  <img src="assets/readme/history.png" width="45%" style="border-radius: 12px;">
+  <img src="app/assets/readme/homepage.png" width="45%" style="border-radius: 12px; margin-right: 10px;">
+  <img src="app/assets/readme/history.png" width="45%" style="border-radius: 12px;">
 </p>
