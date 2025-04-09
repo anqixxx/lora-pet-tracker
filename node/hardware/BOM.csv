@@ -1,0 +1,32 @@
+,Line #,Name,Description,Designator,Revision ID,Revision Status,Quantity,Manufacturer 1,Manufacturer Part Number 1,Manufacturer Lifecycle 1,Supplier 1,Supplier Part Number 1,Supplier Unit Price 1,Supplier Subtotal 1
+,,SR4G008,"GPS Antenna, 1559MHz Min, 1609MHz Max, 0dB Gain",AE1,,,1,Antenova,SR4G008,Unknown,Digikey,627-1063-1-ND,1.95,1.95
+,,CC0603BRNPO9BN1R5,1.5PF-50V-0603,C9,,,1,,,,Digikey,,,
+,,CL10A225KO8NNNC,2.2UF-16V-0603,"C5, C7",,,2,,,,Digikey,2.2UF,,
+,,CC0603JRNPO9BN220,22PF-50V-0603,"C4, C6, C8, C12, C13, C15",,,6,,,,Future Electronics,22PF,,
+,,CC0603JRX7R7BB105,1UF-16V-0603,"C14, C16, C17, C19, C21",,,5,,,,Digikey,1UF,,
+,,ASCH0010050512NJCP,12NH-0.3A-0402,"L1, L2",,,2,,,,Digikey,ASCH0010050512NJCP,,
+,,MLF1608D47NMTA00,47NH-0.2A-0603,"L3, L4, L5",,,3,,,,Digikey,47NH,,
+,,317990829,LORA-E5 Wireless Module,U2,,,1,Seeed Studio,317990829,Unknown,Digikey,1597-317990829CT-ND,7.68,7.68
+,,M20071,M20071 Gps Radionova Rf Module M,U3,,,1,Antenova,M20071,Unknown,Digikey,627-M20071CT-ND,16.68,16.68
+,,LSM6DSOXTR,STM32 IMU,U1,,,1,STMicroelectronics,LSM6DSOXTR,Volume Production,Digikey,497-18367-1-ND,4.4,4.4
+,,RFPC-SMA27-F,SMA-F-TH,J1,,,1,Global Connector Technology,RFPC-SMA27-F,Unknown,Digikey,2072-RFPC-SMA27-F-ND,2.26,2.26
+,,"74LVC1T45GW,125","Bus Transceiver, LVC/LCX/Z Series, 1-Func, 1-Bit, True Output, CMOS, PDSO6","Q1, Q2, Q3, Q4",,,4,,,,Future Electronics,5057811,,
+,,CL10B104JB8NNNC,0.1UF-50V-0603,"C1, C2, C18, C20",,,4,,,,Digikey,0.1UF,,
+,,SMH-108-02-L-S,"Board Connector, 8 Contact(s), 1 Row(s), Female, Right Angle, 0.1 inch Pitch, Surface Mount Terminal, Locking, Black Insulator, Socket",J2,,,1,Samtec,SMH-108-02-L-S,Volume Production,Digikey,SAM11817-ND,2.42,2.42
+,,TL2233OA,Switch Pushbutton DPDT 100MA,S1,,,1,E-Switch,TL2233OA,Unknown,Digikey,141-TL2233OACT-ND,0.46,0.46
+,,3.3pF,3.3PF-50V-0603,"C10, C11",,,2,,,,Future Electronics,CC0603CRNPO9BN3R3,,
+,,RC0603FR-0710KL,10K-0.1W-75V-0603,"R1, R2, R8",,,3,,,,Future Electronics,RC0603FR-0710KL,,
+,,0R,0R-0.2W- 0402,R5,,,1,Vishay Dale,CRCW04020000Z0EDHP,Volume Production,Arrow Electronics,CRCW04020000Z0EDHP,0.0119,119
+,,470,470R-0.1W-75V-0603,"R6, R12",,,2,,,,Digikey,RC0603JR-07470RL,,
+,,RC0603FR-071KL,RES 1K OHM 1% 1/10W 0603,R7,CMP-1659-00009-5,Up to date,1,Yageo,RC0603FR-071KL,Volume Production,Newark,75X0136,0.01,0.1
+,,RC0603FR-07150RL,"Chip Resistor, 150 Ohm, +/- 1%, 0.1 W, -55 to 155 degC, 0603 (1608 Metric), RoHS, Tape and Reel",R9,CMP-1659-00057-1,Up to date,1,Yageo,RC0603FR-07150RL,Volume Production,Digikey,311-150HRDKR-ND,0.1,0.1
+,,BQ21040DBVR,IC BATT CHG LI-ION 1CELL SOT23-6,U4,CMP-04911-000045-1,Up to date,1,Texas Instruments,BQ21040DBVR,Volume Production,Digikey,296-47315-1-ND,0.73,0.73
+,,150060BS55040,Single Color LED,"D1, D2",,,2,Wurth Electronics,150060BS55040,Volume Production,Digikey,732-12013-1-ND,0.17,0.34
+,,USB4135-GF-A,"USB Connector, TYPE C, R/A RCPT, 6POS, SMT; U; Connector Type: USB Type C; Standard: -;",J4,,,1,Global Connector Technology,USB4135-GF-A,Unknown,Digikey,2073-USB4135-GF-ACT-ND,0.67,0.67
+,,CL10A475KO8NNNC,4.7UF-16V-0603,C3,,,1,Samsung,CL10A475KO8NNNC,Not Recommended for New Design,DigiKey,1276-1784-1-ND,0.08,0.08
+,,CRCW06030000Z0EAHP,0R-0603,"R3, R4",,,2,,,,Arrow Electronics,,,
+,,S2B-PH-K-S(LF)(SN),2-contacts; THT; male; side entry; 100V/2A 2.0mm pitch,J3,,,1,JST,S2B-PH-K-S(LF)(SN),Unknown,Future Electronics,7754757,0.0557,0.0557
+,,5.1K,,"R10, R11",CMP-2000-04091-1,Up to date,2,Yageo,RC0603FR-075K1L,Volume Production,Digikey,311-5.10KHRCT-ND,0.009,0.09
+,,JS202011SCQN,"Slide Switch, 2 Positions, DPDT, Latched, 0.3A, 6VDC, 6 PCB Hole Cnt, Solder Terminal, Surface Mount-straight",S2,,,1,ITT C&K,JS202011SCQN,Volume Production,Digikey,401-2002-1-ND,0.74,0.74
+,,TLV74318PDBVR,IC REG LINEAR 1.8V 300MA SOT23-5,U5,CMP-04917-000211-1,Up to date,1,Texas Instruments,TLV74318PDBVR,Volume Production,Digikey,296-48712-1-ND,0.1,0.1
+,,TLV74333PDBVR,IC REG LINEAR 3.3V 300MA SOT23-5,U6,CMP-04917-000051-1,Up to date,1,Texas Instruments,TLV74333PDBVR,Volume Production,Arrow Electronics,TLV74333PDBVR,0.062,0.062
