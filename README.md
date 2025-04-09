@@ -52,7 +52,7 @@ Optionally, it can visualize activity via a Python dashboard, as shown below.
 
 Mobile App (`app/`)
 =========
-A Flutter-based mobile dashboard to view location, battery, and command the node remotely.
+A Flutter-based mobile application to view location, battery, and command the node remotely. It is accessible both on iOS and Android.
 
 <div align="center">
   <figure>
@@ -61,8 +61,7 @@ A Flutter-based mobile dashboard to view location, battery, and command the node
 </div>
 </br>
 
-
-This includes the following features.
+This includes the following features:
 
 - Real-time location & battery updates
 - Historical GPS view
@@ -70,10 +69,11 @@ This includes the following features.
 - Remote buzzer activation
 - Normal/Search mode toggle
 
-
 Data Flow Overview
 =========
 ![Diagram](images/diagram.png)
+
+Below is the node-side logic flowchart for LoRa GPS transmission. The node periodically evaluates whether a GPS update is required based on elapsed time. If in Search Mode, GPS is transmitted immediately. In Normal Mode, IMU activity is used to determine if the node is awake and should proceed with GPS transmission. All transmissions await an acknowledgment (ACK) to confirm delivery.
 
 <div align="center">
   <figure>
@@ -81,7 +81,6 @@ Data Flow Overview
   </figure>
 </div>
 </br>
-
 
 PostgreSQL Table Snapshot
 =========
@@ -103,3 +102,7 @@ Demo Screenshots
   <img src="app/assets/readme/homepage.png" width="45%" style="border-radius: 12px; margin-right: 10px;">
   <img src="app/assets/readme/history.png" width="45%" style="border-radius: 12px;">
 </p>
+
+Questions and help
+==================
+If you have any questions and help, feel free to reach out to the LoRa Pet Tracker Team, Emily, Lauryn, Margaret, and Anqi!
