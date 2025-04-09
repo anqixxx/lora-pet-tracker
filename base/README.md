@@ -25,14 +25,19 @@ Initalization
 To activate the base station, follow the following steps:
 
 1. If you have not already, please clone this repo:
-   ```bash
+   ``` bash
    git clone https://github.com/anqixxx/lora-pet-tracker.git
-   cd lora-pet-tracker/base 
+   cd lora-pet-tracker/base
+   ```
 
-2. Load the code onto the MCU using server.ino with your IDE of choice. We used the Arduino IDE.
+3. Load the code onto the MCU using server.ino with your IDE of choice. We used the Arduino IDE.
 
-3. Run server_query to create the connection with the Backend Supabase PostGreSQL server
-   ```python  server_query.py
-
-4. [Optional] Run the visual dashboard
-   ```python server_visual.py 
+4. Run server_query to create the connection with the Backend Supabase PostGreSQL server
+   ```bash
+   python  server_query.py
+   ```
+   
+5. [Optional] Run the visual dashboard
+   ```bash
+   python server_visual.py
+   ```
