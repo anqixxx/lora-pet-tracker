@@ -115,10 +115,13 @@ Below are the example tables for device status and device commands.
 
 Demo Screenshots
 =========
-<p align="center">
+<!-- <p align="center">
   <img src="app/assets/readme/homepage.png" width="45%" style="border-radius: 12px; margin-right: 10px;">
   <img src="app/assets/readme/history.png" width="45%" style="border-radius: 12px;">
-</p>
+</p> -->
+
+![Pet History and Main Page](node/images/main.png)
+
 
 Questions and help
 ==================
