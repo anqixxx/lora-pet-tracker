@@ -29,7 +29,9 @@ This firmware runs on a GPS + IMU + LoRa-equipped microcontroller worn by the pe
 - Remote buzzer control
 - Normal/Search mode toggle
 
+<p align="center">
 <img src="node/images/collar.png" alt="et Node Hardware" width="400"/>
+</p>
 
 For more detailed information, check out the seperate [README](node/README.md) in the /node folder. [PCB Schematics, Assembly Drawings, and all hardware information](https://github.com/anqixxx/lora-pet-tracker/tree/main/node/hardware) is also located within /node/hardware.
 
@@ -38,8 +40,9 @@ Base Station (`base/`)
 
 The base station receives LoRa packets and relays them to Supabase (PostgreSQL backend).
 
-<img src="base/images/basestation" alt="et Base Station Hardware" width="400"/>
-
+<p align="center">
+<img src="base/images/basestation.png" alt="Base Station Hardware" width="400"/>
+</p>
 
 This includes the following features. For more detailed information, check out the [Base Station README](base/README.md) in the /base folder
 - LoRa reception & decoding
