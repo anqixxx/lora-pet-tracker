@@ -31,7 +31,7 @@ This firmware runs on a GPS + IMU + LoRa-equipped microcontroller worn by the pe
 
 ![Pet Node Hardware](node/images/collar.png)
 
-For more detailed information, check out the seperate [README](node/README.md) in the /node folder
+For more detailed information, check out the seperate [README](node/README.md) in the /node folder. [PCB Schematics, Assembly Drawings, and all hardware information](https://github.com/anqixxx/lora-pet-tracker/tree/main/node/hardware) is also located within /node/hardware.
 
 Base Station (`base/`)
 =========
